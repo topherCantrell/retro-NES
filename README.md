@@ -1,5 +1,4 @@
-# retro-nes
-Old-school development
+# Development on the old Nintendo NES
 
 Journal here: [Journal](journal.md)
 
@@ -12,4 +11,5 @@ https://www.manning.com/books/classic-game-programming-on-the-nes
 Emulator (single file for windows):
 
 https://github.com/SourMesen/Mesen2
+
 

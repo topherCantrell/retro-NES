@@ -3,8 +3,13 @@ Old-school development
 
 Journal here: [Journal](journal.md)
 
-I bought the book:
+I bought this book:
 
 https://www.manning.com/books/classic-game-programming-on-the-nes
 
 ![](art/book.jpg)
+
+Emulator (single file for windows):
+
+https://github.com/SourMesen/Mesen2
+

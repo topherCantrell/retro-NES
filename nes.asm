@@ -1,5 +1,7 @@
 ; Defines for the NES hardware
 
+.CPU 6502
+
 ; 0000 - 07FF   2K Internal RAM
 ; 0800 - 1FFF   (unused -- mirrors)
 ; 2000 - 4FFF   Memory Mapped  Registers
@@ -8,7 +10,10 @@
 ; 8000 - FFFF   32K Cartridge ROM
 
 ; 6502 hardware vectors
-;
-.VectorNMI    = 0xFFFA
-.VectorRESET  = 0xFFFC
-.VectorIRQBRK = 0xFFFE
+; FFFA: NMI
+; FFFC: RESET
+; FFFE: IRQ/BRK
+
+; PPU registers
+.PPU_control_1 = 0x2000
+.PPU_status = 0x2002

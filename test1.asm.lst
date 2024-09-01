@@ -1,0 +1,190 @@
+#### Labels
+MMC_reset        = 0xF87D
+MMC_set_chr_bank_0 = 0xF841
+MMC_set_chr_bank_1 = 0xF855
+MMC_set_control  = 0xF82D
+MMC_set_prg_bank = 0xF869
+_wait1           = 0xF80A
+_wait2           = 0xF811
+done             = 0xF82A
+
+#### Defines
+MMC_CHR_Bank0    = 0xA000
+MMC_CHR_Bank1    = 0xC000
+MMC_Control      = 0x8000
+MMC_PRG_Bank     = 0xE000
+PPU_control_1    = 0x2000
+PPU_status       = 0x2002
+
+                  ; Info about the cartridge hardware
+                  ; Zelda and Kid Icarus use nearly identical cartridge hardware.
+                  ; Mapper: MMC1
+                  ; PRG ROM: 128K
+                  ; CHR ROM: 0
+                  ; PPU RAM: 8K
+                  ; Battery-backed RAM: Zelda=YES, KidIcarus=NO
+                  ; Nametable arrangement: vertical ("horizontal mirrored" CIRAM A10 = PPU A11)
+                  
+                  ; MMC1 Memory Mapper Hardware (Zelda, Kid Icarrus, others)
+                  
+                  ; https://www.nesdev.org/wiki/MMC1
+                  
+                  ; Write 1xxxxxxx to any address 8000-FFFF to reset the MMC1
+                  
+                  ; Write 5 times to an address to shift value into the register
+                  
+                  ; 1_00_xxxxxxxxxxxxx CONTROL:
+                  ; CPPMM
+                  ;  - MM = Mirroring
+                  ;    - 00: one screen, lower bank
+                  ;    - 01: one screen, upper bank
+                  ;    - 10: vertical
+                  ;    - 11: horizontal
+                  ;  - PP = Program ROM bank mode
+                  ;    - 00: switch 32 KB at 8000, ignore low bit of bank number
+                  ;    - 01: (same as 00)
+                  ;    - 02: Fix first bank at 8000, switch 16K bank at C000
+                  ;    - 03: Fix last bank at C000, switch 16K bank at 8000 (reset value)
+                  ; - C = CHR ROM bank mode
+                  ;    - 0: switch 8K at a time
+                  ;    - 1: switch two separate 4K banks
+                  
+                  ; 1_01_xxxxxxxxxxxxx CHR BANK 0
+                  ; CCCCC = Select 4K CHR bank at PPU 0000 (ignored in 8K mode)
+                  
+                  ; 1_10_xxxxxxxxxxxxx CHR BANK 1
+                  ; CCCCC = Select 4K CHR bank at PPU 1000 (ignored in 8K mode)
+                  
+                  ; 1_11_xxxxxxxxxxxxx PRG BANK
+                  ; RPPPP
+                  ; PPPP = Select 16K ROM bank (lower bit ignored in 32K mode)
+                  ; R = unused in MMC1
+                  
+                  .MMC_Control   = 0x8000
+                  .MMC_CHR_Bank0 = 0xA000
+                  .MMC_CHR_Bank1 = 0xC000
+                  .MMC_PRG_Bank  = 0xE000
+                  
+                  
+                  ; Info about the NES console hardware
+                  ; Defines for the NES hardware
+                  
+                  .CPU 6502
+                  
+                  ; 0000 - 07FF   2K Internal RAM
+                  ; 0800 - 1FFF   (unused -- mirrors)
+                  ; 2000 - 4FFF   Memory Mapped  Registers
+                  ; 5000 - 5FFF   Expansion modules (keyboards, etc.)
+                  ; 6000 - 7FFF   8K Cartridge RAM (WRAM)
+                  ; 8000 - FFFF   32K Cartridge ROM
+                  
+                  ; 6502 hardware vectors
+                  ; FFFA: NMI
+                  ; FFFC: RESET
+                  ; FFFE: IRQ/BRK
+                  
+                  ; PPU registers
+                  .PPU_control_1 = 0x2000
+                  .PPU_status = 0x2002
+                  
+                  ; From ZELDA
+                  0xF800:
+                  ; Code lifted from Zelda
+F800: 78               SEI                           ; Disable most interrupts (can't disable NMI)
+F801: D8               CLD                           ; Clear decimal flag
+F802: A9 00            LDA     #0x00                 ; Turn off ...
+F804: 8D 00 20         STA     PPU_control_1         ; ... the source of NMIs
+F807: A2 FF            LDX     #0xFF                 ; Set stack to ...
+F809: 9A               TXS                           ; ... 01FF
+                  _wait1:
+F80A: AD 02 20         LDA     PPU_status            ; Wait ...
+F80D: 29 80            AND     #0x80                 ; ... for ...
+F80F: F0 F9            BEQ     _wait1                ; ... VBLANK
+                  _wait2:
+F811: AD 02 20         LDA     PPU_status            ; Wait ...
+F814: 29 80            AND     #0x80                 ; ... for another ...
+F816: F0 F9            BEQ     _wait2                ; ... VBLANK (1st might have been a leftover flag)
+F818: 20 7D F8         JSR     MMC_reset             ; Reset the MMC1 to a known state
+F81B: A9 0F            LDA     #0x0F                 ; Set MMC control to 8K CHR ROM, fixed/bank 16K PRG pages, ...
+F81D: 20 2D F8         JSR     MMC_set_control       ; ... and horizontal mirroring (vertical scrolling)
+F820: A9 00            LDA     #0x00                 ; Set MMC reg1 VROM bank
+F822: 20 41 F8         JSR     MMC_set_chr_bank_0    ; Clear the VROM bank (we have RAM with no swapping)
+                  ; Zelda does this. We will too.
+F825: A9 07            LDA     #0x07                 ; Interesting! Put bank 7 ...
+F827: 20 69 F8         JSR     MMC_set_prg_bank      ; ... in the low ROM bank
+                  
+                  done:
+                  ; Code goes here
+F82A: 4C 2A F8         JMP     done
+                  
+                  ; Now pull in the routines
+                  .CPU 6502
+                  
+                  ; .include mapper_mmc1.asm
+                  
+                  MMC_set_control:
+                  ; Code lifted from Zelda
+F82D: 8D 00 80         STA     MMC_Control         ; MMC Register 0 (control): --edcba ...
+F830: 4A               LSR     A                   ; ... mirroring
+F831: 8D 00 80         STA     MMC_Control         ; ... mirroring
+F834: 4A               LSR     A                   ; ... switch: c=0 high ROM, C=1 low ROM
+F835: 8D 00 80         STA     MMC_Control         ; ... size: d=0 32K (full), D=1 16K (half)
+F838: 4A               LSR     A                   ; ... chrrom mode: e=0 8K banks, B=1 4K banks
+F839: 8D 00 80         STA     MMC_Control         ; The MMC is write-trigger (write to ROM ...
+F83C: 4A               LSR     A                   ; .. has no affect anyway).
+F83D: 8D 00 80         STA     MMC_Control         ; Bits are written from LSB to MSB ...
+F840: 60               RTS                         ; ... only 5 bits
+                  
+                  MMC_set_chr_bank_0:
+F841: 8D 00 A0         STA     MMC_CHR_Bank0       ;
+F844: 4A               LSR     A                   ;
+F845: 8D 00 A0         STA     MMC_CHR_Bank0       ;
+F848: 4A               LSR     A                   ;
+F849: 8D 00 A0         STA     MMC_CHR_Bank0       ;
+F84C: 4A               LSR     A                   ;
+F84D: 8D 00 A0         STA     MMC_CHR_Bank0       ;
+F850: 4A               LSR     A                   ;
+F851: 8D 00 A0         STA     MMC_CHR_Bank0       ;
+F854: 60               RTS                         ;
+                  
+                  MMC_set_chr_bank_1:
+F855: 8D 00 C0         STA     MMC_CHR_Bank1       ;
+F858: 4A               LSR     A                   ;
+F859: 8D 00 C0         STA     MMC_CHR_Bank1       ;
+F85C: 4A               LSR     A                   ;
+F85D: 8D 00 C0         STA     MMC_CHR_Bank1       ;
+F860: 4A               LSR     A                   ;
+F861: 8D 00 C0         STA     MMC_CHR_Bank1       ;
+F864: 4A               LSR     A                   ;
+F865: 8D 00 C0         STA     MMC_CHR_Bank1       ;
+F868: 60               RTS                         ;
+                  
+                  MMC_set_prg_bank:
+                  ; Set the MMC Bank register (3) to value in A
+                  ; Code lifted from Zelda
+F869: 8D 00 E0         STA     MMC_PRG_Bank        ; MMC Register 3 (ROM page switching): --edcba ...
+F86C: 4A               LSR     A                   ; ...
+F86D: 8D 00 E0         STA     MMC_PRG_Bank        ; ... Write the ...
+F870: 4A               LSR     A                   ; ... switching ...
+F871: 8D 00 E0         STA     MMC_PRG_Bank        ; ... page ...
+F874: 4A               LSR     A                   ; ... number
+F875: 8D 00 E0         STA     MMC_PRG_Bank        ; The MMC is write-trigger (write to ROM ...
+F878: 4A               LSR     A                   ; .. has no affect anyway).
+F879: 8D 00 E0         STA     MMC_PRG_Bank        ; Bits are written from LSB to MSB ...
+F87C: 60               RTS                         ; ... only 5 bits
+                  
+                  MMC_reset:
+                  ; Code lifted from Zelda
+F87D: 09 FF            ORA     #0xFF               ; Reset ...
+F87F: 8D 00 80         STA     MMC_Control         ; ... MMC1
+                  ; One RESET gets all the registers. Other documents think that development hardware might
+                  ; have needed RESET on all four. So here it is.
+F882: 8D 00 A0         STA     MMC_CHR_Bank0       ; All ...
+F885: 8D 00 C0         STA     MMC_CHR_Bank1       ; ... four ...
+F888: 8D 00 E0         STA     MMC_PRG_Bank        ; ... MMC1 registers
+F88B: 60               RTS
+                  
+                  0xFFFA:
+FFFA: 00 F8            .word 0xF800 ; NMI to top
+FFFC: 00 F8            .word 0xF800 ; RESET to top
+FFFE: 00 F8            .word 0xF800 ; IRQ/BRK to top

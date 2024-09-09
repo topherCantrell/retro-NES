@@ -1,22 +1,22 @@
-; Info about the cartridge hardware
+; Info about the external cartridge hardware
 .include cart_zelda_kid.asm
 
-; Info about the NES console hardware
+; Info about the internal NES console hardware
 .include nes.asm
 
 ; From ZELDA
 0xF800:
 ; Code lifted from Zelda
-    SEI                           ; Disable most interrupts (can't disable NMI)
-    CLD                           ; Clear decimal flag
-    LDA     #0x00                 ; Turn off ...
-    STA     PPU_control_1         ; ... the source of NMIs
-    LDX     #0xFF                 ; Set stack to ...
-    TXS                           ; ... 01FF
+    sei                           ; Disable most interrupts (can't disable NMI)
+    cld                           ; Clear decimal flag
+    lda     #0x00                 ; Turn off ...
+    sta     PPU_control_1         ; ... the source of NMIs
+    ldx     #0xFF                 ; Set stack to ...
+    txs                           ; ... 01FF
 _wait1:
     LDA     PPU_status            ; Wait ...
     AND     #0x80                 ; ... for ...
-    BEQ     _wait1                ; ... VBLANK
+    BEQ     _wait1                ; ... VBLANK  qew gwjehgqjwqehg
 _wait2:
     LDA     PPU_status            ; Wait ...
     AND     #0x80                 ; ... for another ...

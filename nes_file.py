@@ -1,6 +1,5 @@
 
-# fname = 'KidIcarus.nes'
-fname = 'Zelda.nes'
+import sys
 
 # Both have 128K ROM. The difference is battery-backed RAM (Zelda has it, Kid Icarus doesn't)
 CART_ZELDA_HEADER = [78, 69, 83, 26, 8, 0, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -42,17 +41,17 @@ class NESFile:
             self.hdr_flags10 = header[10]
             self.hdr_padding = header[11:]
 
-            print(f"Cart ROM size (in 16K blocks): {self.hdr_prg_size}")
-            print(f"Cart CHR ROM size (in 8K blocks): {self.hdr_chr_size}")
-            print(f"Cart RAM size (in 8K blocks): {self.hdr_prg_ram_size}")
-            print(f"Vertical arrangement: {self.hdr_vertical_arrangement}")
-            print(f"Battery backed: {self.hdr_battery_backed}")
-            print(f"Trainer present: {self.hdr_trainer_present}")
-            print(f"Four screen VRAM: {self.hdr_four_screen_vram}")
-            print(f"Mapper: {self.hdr_mapper}")
-            print(f"flags7: {self.hdr_flags7}")
-            print(f"Is PAL: {self.hdr_is_pal}")
-            print(f"flags10: {self.hdr_flags10}")
+            # print(f"Cart ROM size (in 16K blocks): {self.hdr_prg_size}")
+            # print(f"Cart CHR ROM size (in 8K blocks): {self.hdr_chr_size}")
+            # print(f"Cart RAM size (in 8K blocks): {self.hdr_prg_ram_size}")
+            # print(f"Vertical arrangement: {self.hdr_vertical_arrangement}")
+            # print(f"Battery backed: {self.hdr_battery_backed}")
+            # print(f"Trainer present: {self.hdr_trainer_present}")
+            # print(f"Four screen VRAM: {self.hdr_four_screen_vram}")
+            # print(f"Mapper: {self.hdr_mapper}")
+            # print(f"flags7: {self.hdr_flags7}")
+            # print(f"Is PAL: {self.hdr_is_pal}")
+            # print(f"flags10: {self.hdr_flags10}")
 
             self.bindata = list(rom.read())
 
@@ -72,6 +71,22 @@ class NESFile:
             rom.write(bytes(self.bindata))        
 
 if __name__ == '__main__':
-    nes = NESFile(fname)
 
-    print(nes.read_from_bank(7, 0, 16))
+    # args: outfile b0 b1 b2 b3 b4 b5 b6 b7 
+
+    fname = sys.argv[1]
+
+    args = sys.argv[2:]
+    while len(args)<8:
+        args.append(args[-1])
+
+    nes = NESFile.make_new_zelda_cart(fname)    
+    for i in range(8):
+        with open(args[i], 'rb') as f:
+            nes.write_to_bank(i, list(f.read()), 0)
+    nes.save()
+
+    with open(fname+".bin",'wb') as f:
+        for i in range(8):
+            f.write(bytes(nes.read_from_bank(i, 0, 0x4000)))
+

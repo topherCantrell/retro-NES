@@ -6,7 +6,7 @@
 
 ; From ZELDA
 0xF800:
-; Code lifted from Zelda
+; Code lifted from The Legend of Zelda
     sei                           ; Disable most interrupts (can't disable NMI)
     cld                           ; Clear decimal flag
     lda     #0x00                 ; Turn off ...

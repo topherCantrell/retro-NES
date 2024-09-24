@@ -3,7 +3,7 @@
 ; .include mapper_mmc1.asm
 
 MMC_set_control:
-; Code lifted from Zelda
+; Code lifted from The Legend of Zelda
     STA     MMC_Control         ; MMC Register 0 (control): --edcba ...
     LSR     A                   ; ... mirroring
     STA     MMC_Control         ; ... mirroring
@@ -41,7 +41,7 @@ MMC_set_chr_bank_1:
 
 MMC_set_prg_bank: 
 ; Set the MMC Bank register (3) to value in A
-; Code lifted from Zelda
+; Code lifted from The Legend of Zelda
     STA     MMC_PRG_Bank        ; MMC Register 3 (ROM page switching): --edcba ...
     LSR     A                   ; ...
     STA     MMC_PRG_Bank        ; ... Write the ...
@@ -54,7 +54,7 @@ MMC_set_prg_bank:
     RTS                         ; ... only 5 bits
 
 MMC_reset:
-; Code lifted from Zelda
+; Code lifted from The Legend of Zelda
     ORA     #0xFF               ; Reset ...
     STA     MMC_Control         ; ... MMC1
 ; One RESET gets all the registers. Other documents think that development hardware might

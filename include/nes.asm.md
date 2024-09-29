@@ -1,5 +1,4 @@
-.CPU 6502
-
+```code
 ; # Memory Buses and Memory Mappers
 ;
 ; The NES has two address/data buses, one for the CPU and one for the PPU.
@@ -52,9 +51,11 @@
 ; 3F00 - 3F1F   Background and Sprite Palettes
 ; 3F20 - 3FFF   Mirrors of 3F00-3F1F
 
+.CPU 6502
+
 ; PPU registers
-.PPU_control_1      = 0x2000
-.PPU_control_2      = 0x2001
+.PPU_control        = 0x2000
+.PPU_mask           = 0x2001
 .PPU_status         = 0x2002
 .PPU_sprite_address = 0x2003
 .PPU_sprite_data    = 0x2004
@@ -79,11 +80,12 @@
 ; APU_channel_4_unused        = 0x400D
 .APU_channel_4_frequency      = 0x400E
 .APU_channel_4_length         = 0x400F
-.APU_channel_5_play_mode      = 0x4010
+.APU_dm_control               = 0x4010
 .APU_channel_5_delta_counter  = 0x4011
 .APU_channel_5_address        = 0x4012
 .APU_channel_5_length         = 0x4013
 .APU_spr_ram_dma              = 0x4014
 .APU_status                   = 0x4015
-.APU_Joypad_1                 = 0x4016
-.APU_Joypad_2                 = 0x4017
+.APU_joypad_1                 = 0x4016
+.APU_joypad_2                 = 0x4017
+```

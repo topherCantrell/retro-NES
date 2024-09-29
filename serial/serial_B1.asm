@@ -1,6 +1,6 @@
 ; Cartridge and console hardware
-.include cart_zelda_kid.asm 
-.include nes.asm            
+.include ../include/cart_zelda_kid.asm.md 
+.include ../include/nes.asm.md          
 
 ; functions in the upper bank
 .include serial_B7.asm.lab.asm
@@ -9,7 +9,7 @@
 .include serial_ram.asm
 
 0x8000:
-    .byte 0x00
+    .byte 0x61
 
 0xBF50:
 ;

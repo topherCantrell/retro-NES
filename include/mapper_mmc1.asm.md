@@ -1,3 +1,4 @@
+```code
 ; MMC1 Memory Mapper Hardware (Zelda, Kid Icarrus, others)
 
 ; https://www.nesdev.org/wiki/MMC1
@@ -37,3 +38,4 @@
 .MMC_CHR_Bank0 = 0xA000
 .MMC_CHR_Bank1 = 0xC000
 .MMC_PRG_Bank  = 0xE000
+```

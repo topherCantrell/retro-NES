@@ -2,9 +2,18 @@
     SEI                         ; Disable interrupts
     CLD                         ; Clear decimal flag
     LDA     #0x00               ; Clear the PPU control register ...
-    STA     PPU_control_1       ; ... truns off NMI source
+    STA     PPU_control         ; ... truns off NMI source
+    sta     PPU_mask
+    sta     APU_dm_control    
+    lda     #0x40
+    sta     APU_joypad_2
     LDX     #0xFF               ; Set stack pointer ...
     TXS                         ; ... to 01FF
+
+    lda     0x8000              ; Experiment ...
+    sta     0x80                ; ... to see ...
+    lda     0xC000              ; ... how MMC1 ...
+    sta     0x81                ; ... is initialized
 
 _wait1:
     LDA     PPU_status          ; Wait ...

@@ -1,31 +1,17 @@
-
 ; Cartridge and console hardware
-.include cart_zelda_kid.asm 
-.include nes.asm           
+.include ../include/cart_zelda_kid.asm.md 
+.include ../include/nes.asm.md          
+
+; functions in the upper bank
+.include serial_B7.asm.lab.asm
 
 ; RAM use (shared among banks)
 .include serial_ram.asm
 
-0xC000:
+0x8000:
+    .byte 0xA5
 
-START:
-    JMP START
-
-NMI:
-; Called at the end of each video frame (at the start of VBLANK)
-    PHA                   ; Hold A
-    LDA   frame_counter   ; Bump ...
-    CLC                   ; ...
-    ADC   #1              ; ...
-    STA   frame_counter   ; ... the frame counter
-    PLA                   ; Restore A
-    RTI                   ; Done
-
-; Pull in library routines
-.include nes_obj.asm
-.include mapper_mmc1_obj.asm
-
-0xFF50:
+0xBF50:
 ;
 ; At power on, the MMC1 is in a random state. Any of the program banks could be mapped
 ; to the upper part of ROM. Thus every bank has this exact same reset code at the end of the
@@ -39,7 +25,7 @@ NMI:
 ; 
 .include serial_reset.asm
 ;
-0xFFFA:
-    .word NMI    ; NMI handler
-    .word 0xFF50 ; RESET to top
-    .word 0xFF50 ; IRQ/BRK to top
+0xBFFA:
+    .word 0xFF50   ; In case this bank is mapped to upper ROM at RESET
+    .word 0xFF50   ; RESET to top
+    .word 0xFF50   ; IRQ/BRK to top

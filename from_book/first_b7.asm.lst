@@ -1,0 +1,1667 @@
+#### Labels
+CMD_execute      = 0xC166
+CMD_read_byte    = 0xC152
+CMD_read_bytes   = 0xC166
+CMD_read_ppu     = 0xC166
+CMD_write_byte   = 0xC13E
+CMD_write_bytes  = 0xC166
+CMD_write_ppu    = 0xC166
+IRQ              = 0xCB0D
+MEM_copy_large_block = 0xCB20
+MEM_copy_large_block_loop = 0xCB22
+MMC1_reset       = 0xFFE8
+MMC1_set_chr_bank_0 = 0xFFAC
+MMC1_set_chr_bank_1 = 0xFFC0
+MMC1_set_control = 0xFF98
+MMC1_set_prg_bank = 0xFFD4
+NMI              = 0xCAB3
+NMI_do_rendering = 0xCACA
+NMI_loop         = 0xCAE6
+NMI_ppu_update_end = 0xCB07
+PPU_copy_block_to_vram = 0xCB56
+PPU_copy_block_to_vram_copyLoop = 0xCB65
+RESET            = 0xFF50
+RESET_wait1      = 0xFF72
+RESET_wait2      = 0xFF7C
+START            = 0xC001
+START_clear_ram  = 0xC005
+START_wait2      = 0xC10F
+attribute_table  = 0xC5D7
+ch20_2F_Patterns = 0xC663
+ch30_39_Patterns = 0xC763
+ch3A_40_Patterns = 0xC803
+ch41_5A_Patterns = 0xC873
+ch5B_60_Patterns = 0xCA13
+ch7B_7E_Patterns = 0xCA73
+default_palette  = 0xC1F7
+greeting         = 0xC1A5
+main             = 0xC119
+name_table       = 0xC217
+printHexByte     = 0xC632
+printHexByte_printHex1 = 0xC64F
+printHexByte_printHex2 = 0xC65F
+printString      = 0xC617
+printString_printDone = 0xC631
+printString_printLoop = 0xC626
+read_byte        = 0xC169
+read_byte_read1  = 0xC16B
+read_byte_read2  = 0xC172
+read_byte_read_all = 0xC16B
+wait_ppu_off     = 0xCB17
+wait_ppu_off_loop = 0xCB1B
+wait_ppu_update  = 0xCB0E
+wait_ppu_update_loop = 0xCB12
+write_byte       = 0xC187
+write_byte_write1 = 0xC18B
+write_byte_write3 = 0xC19A
+write_byte_write_all = 0xC18B
+
+#### Defines
+APU_DM_CONTROL   = 0x4010
+APU_JOYPAD1      = 0x4016
+APU_JOYPAD2      = 0x4017
+APU_OAMDMA       = 0x4014
+APU_channel_1_frequency = 0x4002
+APU_channel_1_length = 0x4003
+APU_channel_1_sweep = 0x4001
+APU_channel_1_volume = 0x4000
+APU_channel_2_frequency = 0x4006
+APU_channel_2_length = 0x4007
+APU_channel_2_sweep = 0x4005
+APU_channel_2_volume = 0x4004
+APU_channel_3_frequency = 0x400A
+APU_channel_3_length = 0x400B
+APU_channel_3_linear_counter = 0x4008
+APU_channel_4_frequency = 0x400E
+APU_channel_4_length = 0x400F
+APU_channel_4_volume = 0x400C
+APU_channel_5_address = 0x4012
+APU_channel_5_delta_counter = 0x4011
+APU_channel_5_length = 0x4013
+APU_status       = 0x4015
+GP0              = 0x0000
+GP1              = 0x0002
+GP2              = 0x0004
+MMC1_CHR_Bank0   = 0xA000
+MMC1_CHR_Bank1   = 0xC000
+MMC1_Control     = 0x8000
+MMC1_PRG_Bank    = 0xE000
+OAMADDR          = 0x2003
+OAMDATA          = 0x2004
+PPUADDR          = 0x2006
+PPUCTRL          = 0x2000
+PPUDATA          = 0x2007
+PPUMASK          = 0x2001
+PPUSCROLL        = 0x2005
+PPUSTATUS        = 0x2002
+nmi_ready        = 0x0010
+oam              = 0x0200
+palette          = 0x0300
+
+                  .CPU 6502
+                  
+                  .GP0      = 0x00               ; General purpose register 0
+                  .GP1      = 0x02               ; General purpose register 1
+                  .GP2      = 0x04               ; General purpose register 2
+                  
+                  .nmi_ready = 0x10              ; 0=skip NMI, 1=render, 2=disable rendering and NMI
+                  ; Stack is 0x0100-0x01FF
+                  .oam       = 0x200             ; 256 bytes (32 sprites, 4 bytes each)
+                  .palette   = 0x300             ; 32 bytes
+                  .CPU 6502
+                  
+                  ; PPU registers
+                  .PPUCTRL        = 0x2000 ; Write only
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUCTRL
+                  ;      VPHBSINN
+                  ;        V=1 enable NMI generation, 0 disabled
+                  ;        P=1 PPU is master, 0 read backdrop from EXT pins
+                  ;        H=1 sprites are 8x16, 0 for 8x8
+                  ;        B=0 background pattern table is 0000, 1 for 1000
+                  ;        S=0 sprite pattern table for 8x8 is 0000, 1 for 1000 (ignored in 8x16)
+                  ;        I=0 vram increments by 1 with each write, 0 for increment by 32 for each write
+                  ;        NN base name table address: 0=2000, 1=2400, 2=2800, 3=2C00
+                  
+                  .PPUMASK           = 0x2001 ; Write only
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUMASK
+                  ;      BGRsbMmG
+                  ;        BGR Emphasize Blue, Green, and Red
+                  ;        s=1 enable sprite rendering, 0 for hide
+                  ;        b=1 enable background rendering, 0 for hide
+                  ;        M=1 show sprites in leftmost 8 pixels, 0 for hide
+                  ;        m=1 show background leftmost 8 pixels, 0 for hide
+                  ;        G=0 normal color, 1 for greyscale
+                  
+                  .PPUSTATUS         = 0x2002 ; Read only
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUSTATUS
+                  ;      VSO-----
+                  ;        V=1 VBlank happened, cleared on read, unreliable (use NMI)
+                  ;        S=1 sprite 0 hit the background
+                  ;        O=1 when more than 8 sprites are on a line (buggy and not reliable)
+                  
+                  ; https://www.nesdev.org/wiki/PPU_registers#OAMADDR
+                  .OAMADDR = 0x2003 ; Write 0 here and use DMA
+                  .OAMDATA = 0x2004 ; Use DMA instead
+                  
+                  ; IMPORTANT: writes to PPU_vram_address and name-table-bits in PPU_control must
+                  ; happen BEFORE writes to the scroll offset.
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUSCROLL
+                  
+                  .PPUSCROLL  = 0x2005 ; 1st write (after reading the status) for X scroll, 2nd write for Y
+                  ;https://www.nesdev.org/wiki/PPU_registers#PPUSCROLL
+                  
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUADDR
+                  .PPUADDR   = 0x2006 ; 1st write (after reading the status) for MSB, 2nd for LSB
+                  .PPUDATA   = 0x2007
+                  ;
+                  ; The PPU palette can become corrupted (see the link). When done writing to palette memory,
+                  ; the workaround is to always:
+                  ;   1. Update the address, if necessary, so that it's pointing at $3F00, $3F10, $3F20, or any other mirror.
+                  ;   2. Only then change the address to point outside of palette memory.
+                  
+                  ; APU registers
+                  .APU_channel_1_volume         = 0x4000
+                  .APU_channel_1_sweep          = 0x4001
+                  .APU_channel_1_frequency      = 0x4002
+                  .APU_channel_1_length         = 0x4003
+                  .APU_channel_2_volume         = 0x4004
+                  .APU_channel_2_sweep          = 0x4005
+                  .APU_channel_2_frequency      = 0x4006
+                  .APU_channel_2_length         = 0x4007
+                  .APU_channel_3_linear_counter = 0x4008
+                  ; APU_channel_3_unused        = 0x4009
+                  .APU_channel_3_frequency      = 0x400A
+                  .APU_channel_3_length         = 0x400B
+                  .APU_channel_4_volume         = 0x400C
+                  ; APU_channel_4_unused        = 0x400D
+                  .APU_channel_4_frequency      = 0x400E
+                  .APU_channel_4_length         = 0x400F
+                  
+                  .APU_DM_CONTROL               = 0x4010
+                  ;      IL--RRRR
+                  ;        I=1 enable DPCM interrupt, 0 for diable
+                  ;        L loop flag
+                  ;        RRRR Rate index
+                  
+                  .APU_channel_5_delta_counter  = 0x4011
+                  .APU_channel_5_address        = 0x4012
+                  .APU_channel_5_length         = 0x4013
+                  .APU_OAMDMA                   = 0x4014
+                  .APU_status                   = 0x4015
+                  .APU_JOYPAD1                  = 0x4016
+                  
+                  .APU_JOYPAD2                  = 0x4017
+                  ;      MI------
+                  ;        M=1 5-step sequence, 0 for 4-step sequence
+                  ;        I=1 interrupt inhibited, 0 for enterrupt enabled
+                  
+                  ; MMC1 Memory Mapper Hardware (Zelda, Kid Icarrus, others)
+                  
+                  ; https://www.nesdev.org/wiki/MMC1
+                  
+                  ; Write 1xxxxxxx to any address 8000-FFFF to reset the MMC1
+                  
+                  ; Write 5 times to an address to shift value into the register
+                  
+                  ; 1_00_xxxxxxxxxxxxx CONTROL:
+                  ; CPPMM
+                  ;  - MM = Mirroring
+                  ;    - 00: one screen, lower bank
+                  ;    - 01: one screen, upper bank
+                  ;    - 10: vertical
+                  ;    - 11: horizontal
+                  ;  - PP = Program ROM bank mode
+                  ;    - 00: switch 32 KB at 8000, ignore low bit of bank number
+                  ;    - 01: (same as 00)
+                  ;    - 02: Fix first bank at 8000, switch 16K bank at C000
+                  ;    - 03: Fix last bank at C000, switch 16K bank at 8000 (reset value)
+                  ; - C = CHR ROM bank mode
+                  ;    - 0: switch 8K at a time
+                  ;    - 1: switch two separate 4K banks
+                  
+                  ; 1_01_xxxxxxxxxxxxx CHR BANK 0
+                  ; CCCCC = Select 4K CHR bank at PPU 0000 (ignored in 8K mode)
+                  
+                  ; 1_10_xxxxxxxxxxxxx CHR BANK 1
+                  ; CCCCC = Select 4K CHR bank at PPU 1000 (ignored in 8K mode)
+                  
+                  ; 1_11_xxxxxxxxxxxxx PRG BANK
+                  ; RPPPP
+                  ; PPPP = Select 16K ROM bank (lower bit ignored in 32K mode)
+                  ; R = unused in MMC1
+                  
+                  .MMC1_Control   = 0x8000
+                  .MMC1_CHR_Bank0 = 0xA000
+                  .MMC1_CHR_Bank1 = 0xC000
+                  .MMC1_PRG_Bank  = 0xE000
+                  #macro write_word(value,address)
+                  #   lda #:value:&0xFF
+                  #   sta :address:
+                  #   lda #:value:>>8
+                  #   sta :address:+1
+                  
+                  0xC000:
+                  
+C000: 70               . byte 0x70  ; Bank identifier for reset experiment
+                  
+                  START:
+                  
+                  ; Clear all of RAM (including stack ... so don't make this a function)
+                  
+C001: A9 00            lda    #0                  ; RAM value (clear)
+C003: A2 00            ldx    #0                  ; Start address (0x0000)
+                  _clear_ram:
+                  ; sta    0x0000,X            ; Clear   TODO for now keep the bank id experiment values
+C005: 9D 00 01         sta    0x0100,X            ; ...
+C008: 9D 00 02         sta    0x0200,X            ; ... all
+C00B: 9D 00 03         sta    0x0300,X            ; ...
+C00E: 9D 00 04         sta    0x0400,X            ; ... 2KB
+C011: 9D 00 05         sta    0x0500,X            ; ...
+C014: 9D 00 06         sta    0x0600,X            ; ...
+C017: 9D 00 07         sta    0x0700,X            ; ... of RAM
+C01A: E8               inx                        ; Next address
+C01B: D0 E8            bne    _clear_ram          ; All of RAM
+                  
+                  ; Copy default palette to our palette ram
+                  #write_word(default_palette, GP0)
+C01D: A9 F7            lda #default_palette&0xFF
+C01F: 85 00            sta GP0
+C021: A9 C1            lda #default_palette>>8
+C023: 85 01            sta GP0+1
+                  #write_word(palette, GP1)
+C025: A9 00            lda #palette&0xFF
+C027: 85 02            sta GP1
+C029: A9 03            lda #palette>>8
+C02B: 85 03            sta GP1+1
+                  #write_word(32, GP2)
+C02D: A9 20            lda #32&0xFF
+C02F: 85 04            sta GP2
+C031: A9 00            lda #32>>8
+C033: 85 05            sta GP2+1
+C035: 20 20 CB         jsr    MEM_copy_large_block
+                  
+                  ; Copy image bit patterns to PPU
+                  
+                  #write_word(ch20_2F_Patterns, GP0) ; Source
+C038: A9 63            lda #ch20_2F_Patterns&0xFF
+C03A: 85 00            sta GP0
+C03C: A9 C6            lda #ch20_2F_Patterns>>8
+C03E: 85 01            sta GP0+1
+                  #write_word(32*16, GP1)            ; Destination
+C040: A9 00            lda #32*16&0xFF
+C042: 85 02            sta GP1
+C044: A9 02            lda #32*16>>8
+C046: 85 03            sta GP1+1
+                  #write_word(26*16, GP2)            ; Size
+C048: A9 A0            lda #26*16&0xFF
+C04A: 85 04            sta GP2
+C04C: A9 01            lda #26*16>>8
+C04E: 85 05            sta GP2+1
+                  
+C050: 20 56 CB         jsr    PPU_copy_block_to_vram
+                  
+                  ;
+                  #write_word(ch3A_40_Patterns, GP0) ; Source
+C053: A9 03            lda #ch3A_40_Patterns&0xFF
+C055: 85 00            sta GP0
+C057: A9 C8            lda #ch3A_40_Patterns>>8
+C059: 85 01            sta GP0+1
+                  #write_word(58*16, GP1)            ; Destination
+C05B: A9 A0            lda #58*16&0xFF
+C05D: 85 02            sta GP1
+C05F: A9 03            lda #58*16>>8
+C061: 85 03            sta GP1+1
+                  #write_word(7*16, GP2)             ; Size
+C063: A9 70            lda #7*16&0xFF
+C065: 85 04            sta GP2
+C067: A9 00            lda #7*16>>8
+C069: 85 05            sta GP2+1
+                  
+C06B: 20 56 CB         jsr    PPU_copy_block_to_vram
+                  
+                  ;
+                  #write_word(ch41_5A_Patterns, GP0) ; Source
+C06E: A9 73            lda #ch41_5A_Patterns&0xFF
+C070: 85 00            sta GP0
+C072: A9 C8            lda #ch41_5A_Patterns>>8
+C074: 85 01            sta GP0+1
+                  #write_word(65*16, GP1)            ; Destination
+C076: A9 10            lda #65*16&0xFF
+C078: 85 02            sta GP1
+C07A: A9 04            lda #65*16>>8
+C07C: 85 03            sta GP1+1
+                  #write_word(26*16, GP2)            ; Size
+C07E: A9 A0            lda #26*16&0xFF
+C080: 85 04            sta GP2
+C082: A9 01            lda #26*16>>8
+C084: 85 05            sta GP2+1
+                  
+C086: 20 56 CB         jsr    PPU_copy_block_to_vram
+                  
+                  ; Copy the name table and attributes to the PPU
+                  #write_word(name_table, GP0)       ; Source
+C089: A9 17            lda #name_table&0xFF
+C08B: 85 00            sta GP0
+C08D: A9 C2            lda #name_table>>8
+C08F: 85 01            sta GP0+1
+                  #write_word(0x2000, GP1)           ; Destination
+C091: A9 00            lda #0x2000&0xFF
+C093: 85 02            sta GP1
+C095: A9 20            lda #0x2000>>8
+C097: 85 03            sta GP1+1
+                  #write_word(32*30, GP2)            ; Size
+C099: A9 C0            lda #32*30&0xFF
+C09B: 85 04            sta GP2
+C09D: A9 03            lda #32*30>>8
+C09F: 85 05            sta GP2+1
+                  
+C0A1: 20 56 CB         jsr    PPU_copy_block_to_vram
+                  
+                  ;
+                  #write_word(attribute_table, GP0)  ; Source
+C0A4: A9 D7            lda #attribute_table&0xFF
+C0A6: 85 00            sta GP0
+C0A8: A9 C5            lda #attribute_table>>8
+C0AA: 85 01            sta GP0+1
+                  #write_word(0x23C0, GP1)           ; Destination
+C0AC: A9 C0            lda #0x23C0&0xFF
+C0AE: 85 02            sta GP1
+C0B0: A9 23            lda #0x23C0>>8
+C0B2: 85 03            sta GP1+1
+                  #write_word(64, GP2)               ; Size
+C0B4: A9 40            lda #64&0xFF
+C0B6: 85 04            sta GP2
+C0B8: A9 00            lda #64>>8
+C0BA: 85 05            sta GP2+1
+                  
+C0BC: 20 56 CB         jsr    PPU_copy_block_to_vram
+                  
+                  ; Print static
+                  #write_word(greeting, GP0)
+C0BF: A9 A5            lda #greeting&0xFF
+C0C1: 85 00            sta GP0
+C0C3: A9 C1            lda #greeting>>8
+C0C5: 85 01            sta GP0+1
+                  #write_word(0x2040, GP1)
+C0C7: A9 40            lda #0x2040&0xFF
+C0C9: 85 02            sta GP1
+C0CB: A9 20            lda #0x2040>>8
+C0CD: 85 03            sta GP1+1
+C0CF: 20 17 C6         jsr    printString
+                  
+                  #write_word(0x204C, GP1)
+C0D2: A9 4C            lda #0x204C&0xFF
+C0D4: 85 02            sta GP1
+C0D6: A9 20            lda #0x204C>>8
+C0D8: 85 03            sta GP1+1
+C0DA: A5 80            lda    0x80
+C0DC: 20 32 C6         jsr    printHexByte
+                  
+                  #write_word(0x205C, GP1)
+C0DF: A9 5C            lda #0x205C&0xFF
+C0E1: 85 02            sta GP1
+C0E3: A9 20            lda #0x205C>>8
+C0E5: 85 03            sta GP1+1
+C0E7: A5 81            lda    0x81
+C0E9: 20 32 C6         jsr    printHexByte
+                  
+                  #write_word(0x2086, GP1)
+C0EC: A9 86            lda #0x2086&0xFF
+C0EE: 85 02            sta GP1
+C0F0: A9 20            lda #0x2086>>8
+C0F2: 85 03            sta GP1+1
+C0F4: AD 16 40         lda    0x4016
+C0F7: 29 19            and    #0b11001
+C0F9: 20 32 C6         jsr    printHexByte
+                  
+                  #write_word(0x208F, GP1)
+C0FC: A9 8F            lda #0x208F&0xFF
+C0FE: 85 02            sta GP1
+C100: A9 20            lda #0x208F>>8
+C102: 85 03            sta GP1+1
+C104: AD 17 40         lda    0x4017
+C107: 29 19            and    #0b11001
+C109: 20 32 C6         jsr    printHexByte
+                  
+                  ; Wait for another vblank flag
+C10C: 2C 02 20         bit    PPUSTATUS
+                  _wait2:
+C10F: 2C 02 20         bit    PPUSTATUS           ; Wait for ...
+C112: 10 FB            bpl    _wait2              ; ... vblank flag
+                  
+                  ; Enable NMI
+C114: A9 88            lda    #0b10001000         ; Enable NMI and configure name table use ...
+C116: 8D 00 20         sta    PPUCTRL             ; ... BG=0, Sprites=1
+                  
+                  main:
+                  
+C119: 20 0E CB         jsr    wait_ppu_update
+                  
+C11C: 20 69 C1         jsr    read_byte           ; Read a serial byte
+                  
+                  ; 01 aa AA dd              - Write value dd to AAaa
+                  ; 02 aa AA                 - Read value from AAaa
+                  ;
+                  ; 03 aa AA ss dd dd dd ... - Write multiple values to AAaa+
+                  ; 04 aa AA ss              - Read multiple values from AAaa+
+                  ; 05 aa AA                 - Execute code at AAaa
+                  ; 06 aa AA ss dd dd dd ... - Write multiple values to PPU AAaa+
+                  ; 07 aa AA ss              - Read multiple values from PPU AAaa+
+                  ; Others ignored
+                  
+C11F: C9 01            cmp    #1
+C121: F0 1B            beq    CMD_write_byte
+C123: C9 02            cmp    #2
+C125: F0 2B            beq    CMD_read_byte
+C127: C9 03            cmp    #3
+C129: F0 3B            beq    CMD_write_bytes
+C12B: C9 04            cmp    #4
+C12D: F0 37            beq    CMD_read_bytes
+C12F: C9 05            cmp    #5
+C131: F0 33            beq    CMD_execute
+C133: C9 06            cmp    #6
+C135: F0 2F            beq    CMD_write_ppu
+C137: C9 07            cmp    #7
+C139: F0 2B            beq    CMD_read_ppu
+C13B: 4C 19 C1         jmp    main
+                  
+                  CMD_write_byte:
+C13E: 20 69 C1         jsr    read_byte           ; Read address LSB
+C141: 85 04            sta    GP2                 ; Store it
+C143: 20 69 C1         jsr    read_byte           ; Read address MSB
+C146: 85 05            sta    GP2+1               ; Store it
+C148: 20 69 C1         jsr    read_byte           ; Read data
+C14B: A0 00            ldy    #0                  ; 0 index
+C14D: 91 04            sta    (GP2),Y             ; Write the data
+C14F: 4C 19 C1         jmp    main
+                  
+                  CMD_read_byte:
+C152: 20 69 C1         jsr    read_byte           ; Read address LSB
+C155: 85 04            sta    GP2                 ; Store it
+C157: 20 69 C1         jsr    read_byte           ; Read address MSB
+C15A: 85 05            sta    GP2+1               ; Store it
+C15C: A0 00            ldy    #0                  ; 0 index
+C15E: B1 04            lda    (GP2),Y             ; Read the data
+C160: 20 87 C1         jsr    write_byte          ; Send it to the monitor
+C163: 4C 19 C1         jmp    main
+                  
+                  CMD_write_bytes:
+                  CMD_read_bytes:
+                  CMD_execute:
+                  CMD_write_ppu:
+                  CMD_read_ppu:
+C166: 4C 19 C1         jmp    main
+                  
+                  read_byte:
+                  ; in-data is 0x4016 bit D0
+                  ; clock is 0x4016 bit D3
+C169: A2 08            ldx    #8                  ; 8 bits
+                  _read_all:
+                  ; Wait for clock to go low
+                  _read1:
+C16B: AD 16 40         lda    APU_JOYPAD1         ; Read controller port
+C16E: 29 08            and    #0b0000_1000        ; Wait for CLOCK (inverted) ...
+C170: F0 F9            beq    _read1              ; ... to go low
+                  ; Wait for clock to go high
+                  _read2:
+C172: AD 16 40         lda    APU_JOYPAD1         ; Read controller port
+C175: 29 08            and    #0b0000_1000        ; Wait for CLOCK (inverted) ...
+C177: D0 F9            bne    _read2              ; ... to go high
+C179: AD 16 40         lda    APU_JOYPAD1         ; Read controller port
+C17C: 49 FF            eor    #255                ; Input is inverted. Flip the bits.
+C17E: 6A               ror    a                   ; DATA_IN to carry ...
+C17F: 26 00            rol    GP0                 ; ... and to final value
+                  ; Repeat
+C181: CA               dex                        ; Do all ...
+C182: D0 E7            bne    _read_all           ; ... 8 bits
+C184: A5 00            lda    GP0                 ; Return the value
+C186: 60               rts                        ; Done
+                  
+                  write_byte:
+                  ; out-data is 0x4016 bit D0
+                  ; clock is 0x4016 bit D3
+C187: 85 00            sta    GP0                 ; The outgoing bits
+C189: A2 08            ldx    #8                  ; 8 bits to move
+                  _write_all:
+                  ; Wait for clock to go low
+                  _write1:
+C18B: AD 16 40         lda    APU_JOYPAD1         ; Read controller port
+C18E: 29 08            and    #0b0000_1000        ; Wait for CLOCK (inverted) ...
+C190: F0 F9            beq    _write1             ; ... to go low
+                  ; Write the data
+C192: 26 00            rol    GP0                 ; Get the next bit ...
+C194: 2A               rol    a                   ; ... to A bit 0
+C195: 29 01            and    #1                  ; Isolate the bit
+C197: 8D 16 40         sta    APU_JOYPAD1         ; Write the bit
+                  ; Wait for clock to go high
+                  _write3:
+C19A: AD 16 40         lda    APU_JOYPAD1         ; Read controller port
+C19D: 29 08            and    #0b0000_1000        ; Wait for CLOCK (inverted) ...
+C19F: D0 F9            bne    _write3              ; ... to go high
+                  ; Repeat
+C1A1: CA               dex                        ; Do all ...
+C1A2: D0 E7            bne    _write_all          ; ... 8 bits
+C1A4: 60               rts                        ; Done
+                  
+                  greeting:
+C1A5: 4C 4F 57 45 52 20 42 41 4E 4B 3A 20 3F 3F 20 20 55 50 50 45 52 20 42 41 4E 4B 3A 20 3F 3F 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 34 30 31 36 3A 20 3F 3F 20 34 30 31 37 3A 20 3F 3F 00 . byte "LOWER BANK: ??  UPPER BANK: ??                                  4016: ?? 4017: ??",0
+                  
+                  ; ==========================================================================
+                  
+                  default_palette:
+C1F7: 0F 15 26 37      . byte 0x0F, 0x15, 0x26, 0x37
+C1FB: 0F 09 19 29      . byte 0x0F, 0x09, 0x19, 0x29
+C1FF: 0F 01 11 21      . byte 0x0F, 0x01, 0x11, 0x21
+C203: 0F 00 10 30      . byte 0x0F, 0x00, 0x10, 0x30
+C207: 0F 18 28 38      . byte 0x0F, 0x18, 0x28, 0x38
+C20B: 0F 14 24 34      . byte 0x0F, 0x14, 0x24, 0x34
+C20F: 0F 1B 2B 3B      . byte 0x0F, 0x1B, 0x2B, 0x3B
+C213: 0F 12 22 32      . byte 0x0F, 0x12, 0x22, 0x32
+                  
+                  name_table:
+C217: 41 41 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 42 42 . byte 65,65,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,66,66
+C237: 41 41 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 42 42 . byte 65,65,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,66,66
+C257: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C277: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C297: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C2B7: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C2D7: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C2F7: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C317: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C337: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C357: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C377: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C397: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C3B7: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C3D7: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C3F7: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C417: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C437: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C457: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C477: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C497: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C4B7: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C4D7: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C4F7: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C517: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C537: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C557: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C577: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 . byte 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+C597: 43 43 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 44 44 . byte 67,67,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,68,68
+C5B7: 43 43 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 44 44 . byte 67,67,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,68,68
+                  
+                  attribute_table:
+C5D7: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 . byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+C5F7: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 . byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                  
+                  printString:
+                  ; Print a null-terminated string to the screen
+                  ;
+                  ; GP0 = ROM address of string
+                  ; GP1 = Name table address
+                  ;
+C617: AD 02 20         lda    PPUSTATUS     ; Clear address vram address latch
+C61A: A5 03            lda    GP1+1         ; MSB of ...
+C61C: 8D 06 20         sta    PPUADDR       ; ... name table address
+C61F: A5 02            lda    GP1           ; LSB of ...
+C621: 8D 06 20         sta    PPUADDR       ; ... name table address
+C624: A0 00            ldy    #0x00         ; First byte of string
+                  _printLoop:
+C626: B1 00            lda    (GP0),Y       ; Next character
+C628: F0 07            beq    _printDone    ; End of string
+C62A: 8D 07 20         sta    PPUDATA       ; To screen
+C62D: C8               iny                  ; Next character
+C62E: 4C 26 C6         jmp    _printLoop    ; Do all
+                  _printDone:
+C631: 60               rts                  ; Done
+                  
+                  printHexByte:
+                  ; Print a 2 digit hex byte to the screen
+                  ;
+                  ; A = Value to print
+                  ; GP1 = Name table address
+                  ;
+C632: AA               tax                  ; Save value
+C633: AD 02 20         lda    PPUSTATUS     ; Clear address vram address latch
+C636: A5 03            lda    GP1+1         ; MSB of ...
+C638: 8D 06 20         sta    PPUADDR       ; ... name table address
+C63B: A5 02            lda    GP1           ; LSB of ...
+C63D: 8D 06 20         sta    PPUADDR       ; ... name table address
+C640: 8A               txa                  ; Restore value
+C641: 4A               lsr    a             ; High ...
+C642: 4A               lsr    a             ; ...
+C643: 4A               lsr    a             ; ...
+C644: 4A               lsr    a             ; ... nibble
+C645: 18               clc                  ; Clear carry
+C646: 69 30            adc    #0x30         ; Convert to ASCII
+C648: C9 3A            cmp    #0x3A         ; Greater than 9?
+C64A: 90 03            bcc    _printHex1    ; No
+C64C: 18               clc
+C64D: 69 07            adc    #7
+                  _printHex1:
+C64F: 8D 07 20         sta    PPUDATA       ; To screen
+C652: 8A               txa                  ; Restore value
+C653: 29 0F            and    #0x0F         ; Low nibble
+C655: 18               clc                  ; Clear carry
+C656: 69 30            adc    #0x30         ; Convert to ASCII
+C658: C9 3A            cmp    #0x3A         ; Greater than 9?
+C65A: 90 03            bcc    _printHex2    ; No
+C65C: 18               clc
+C65D: 69 07            adc    #7
+                  _printHex2:
+C65F: 8D 07 20         sta    PPUDATA       ; To screen
+C662: 60               rts
+                  
+                  ; From 0x20 to 0x39 -- first symbols and the numbers
+                  
+                  ch20_2F_Patterns:
+                  
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+C663: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 . 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ........
+                  ;   ...11...
+                  ;   ........
+C673: 18 18 18 18 18 00 18 00 00 00 00 00 00 00 00 00 . 0x18, 0x18, 0x18, 0x18, 0x18, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ..1..1..
+                  ;   ..1..1..
+                  ;   ..1..1..
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+C683: 24 24 24 00 00 00 00 00 00 00 00 00 00 00 00 00 . 0x24, 0x24, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+C693: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+C6A3: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+C6B3: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+                  ;   .111....
+                  ;   1...1...
+                  ;   .1.1....
+                  ;   ..1.....
+                  ;   .1.1.1..
+                  ;   1...1...
+                  ;   .111.11.
+                  ;   ........
+C6C3: 70 88 50 20 54 88 76 00 00 00 00 00 00 00 00 00 . 0x70, 0x88, 0x50, 0x20, 0x54, 0x88, 0x76, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ..11....
+                  ;   ...1....
+                  ;   ..1.....
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+C6D3: 30 10 20 00 00 00 00 00 00 00 00 00 00 00 00 00 . 0x30, 0x10, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+C6E3: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+C6F3: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+C703: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+C713: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ..11....
+                  ;   ...1....
+                  ;   ..1.....
+                  ;   ........
+C723: 00 00 00 00 30 10 20 00 00 00 00 00 00 00 00 00 . 0x00, 0x00, 0x00, 0x00, 0x30, 0x10, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   111111..
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+C733: 00 00 00 FC 00 00 00 00 00 00 00 00 00 00 00 00 . 0x00, 0x00, 0x00, 0xFC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ........
+                  ;   ..11....
+                  ;   ..11....
+                  ;   ........
+C743: 00 00 00 00 00 30 30 00 00 00 00 00 00 00 00 00 . 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+C753: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+                  ch30_39_Patterns:
+                  
+                  ;   ..111...
+                  ;   .1..11..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   .11..1..
+                  ;   ..111...
+                  ;   ........
+C763: 38 4C C6 C6 C6 64 38 00 00 00 00 00 00 00 00 00 . 0x38, 0x4C, 0xC6, 0xC6, 0xC6, 0x64, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ...11...
+                  ;   ..111...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   .111111.
+                  ;   ........
+C773: 18 38 18 18 18 18 7E 00 00 00 00 00 00 00 00 00 . 0x18, 0x38, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .11111..
+                  ;   11...11.
+                  ;   ....111.
+                  ;   ..1111..
+                  ;   .1111...
+                  ;   111.....
+                  ;   1111111.
+                  ;   ........
+C783: 7C C6 0E 3C 78 E0 FE 00 00 00 00 00 00 00 00 00 . 0x7C, 0xC6, 0x0E, 0x3C, 0x78, 0xE0, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .111111.
+                  ;   ....11..
+                  ;   ...11...
+                  ;   ..1111..
+                  ;   .....11.
+                  ;   11...11.
+                  ;   .11111..
+                  ;   ........
+C793: 7E 0C 18 3C 06 C6 7C 00 00 00 00 00 00 00 00 00 . 0x7E, 0x0C, 0x18, 0x3C, 0x06, 0xC6, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ...111..
+                  ;   ..1111..
+                  ;   .11.11..
+                  ;   11..11..
+                  ;   1111111.
+                  ;   ....11..
+                  ;   ....11..
+                  ;   ........
+C7A3: 1C 3C 6C CC FE 0C 0C 00 00 00 00 00 00 00 00 00 . 0x1C, 0x3C, 0x6C, 0xCC, 0xFE, 0x0C, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   111111..
+                  ;   11......
+                  ;   111111..
+                  ;   .....11.
+                  ;   .....11.
+                  ;   11...11.
+                  ;   .11111..
+                  ;   ........
+C7B3: FC C0 FC 06 06 C6 7C 00 00 00 00 00 00 00 00 00 . 0xFC, 0xC0, 0xFC, 0x06, 0x06, 0xC6, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ..1111..
+                  ;   .11.....
+                  ;   11......
+                  ;   111111..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   .11111..
+                  ;   ........
+C7C3: 3C 60 C0 FC C6 C6 7C 00 00 00 00 00 00 00 00 00 . 0x3C, 0x60, 0xC0, 0xFC, 0xC6, 0xC6, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   1111111.
+                  ;   11...11.
+                  ;   ....11..
+                  ;   ...11...
+                  ;   ..11....
+                  ;   ..11....
+                  ;   ..11....
+                  ;   ........
+C7D3: FE C6 0C 18 30 30 30 00 00 00 00 00 00 00 00 00 . 0xFE, 0xC6, 0x0C, 0x18, 0x30, 0x30, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .1111...
+                  ;   11...1..
+                  ;   111..1..
+                  ;   .1111...
+                  ;   1....11.
+                  ;   1....11.
+                  ;   .11111..
+                  ;   ........
+C7E3: 78 C4 E4 78 86 86 7C 00 00 00 00 00 00 00 00 00 . 0x78, 0xC4, 0xE4, 0x78, 0x86, 0x86, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .11111..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   .111111.
+                  ;   .....11.
+                  ;   ....11..
+                  ;   .1111...
+                  ;   ........
+C7F3: 7C C6 C6 7E 06 0C 78 00 00 00 00 00 00 00 00 00 . 0x7C, 0xC6, 0xC6, 0x7E, 0x06, 0x0C, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ; From 0x3A to 0x40 -- more symbols
+                  
+                  ch3A_40_Patterns:
+                  
+C803: 00 30 30 00 30 30 00 00 00 00 00 00 00 00 00 00
+                  ........
+                  ..11....
+                  ..11....
+                  ........
+                  ..11....
+                  ..11....
+                  ........
+                  ........
+                  }
+                  
+C813: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+C823: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+C833: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+C843: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+                  ;   ..111...
+                  ;   .1...1..
+                  ;   .....1..
+                  ;   ....1...
+                  ;   ...1....
+                  ;   ........
+                  ;   ...1....
+                  ;   ........
+C853: 38 44 04 08 10 00 10 00 00 00 00 00 00 00 00 00 . 0x38, 0x44, 0x04, 0x08, 0x10, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+C863: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+                  ; From 0x41 to 0x5A -- capital letters
+                  
+                  ch41_5A_Patterns:
+                  
+                  ;   ..111...
+                  ;   .11.11..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   1111111.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   ........
+C873: 38 6C C6 C6 FE C6 C6 00 00 00 00 00 00 00 00 00 . 0x38, 0x6C, 0xC6, 0xC6, 0xFE, 0xC6, 0xC6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   111111..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   111111..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   111111..
+                  ;   ........
+C883: FC C6 C6 FC C6 C6 FC 00 00 00 00 00 00 00 00 00 . 0xFC, 0xC6, 0xC6, 0xFC, 0xC6, 0xC6, 0xFC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ..1111..
+                  ;   .11..11.
+                  ;   11......
+                  ;   11......
+                  ;   11......
+                  ;   .11..11.
+                  ;   ..1111..
+                  ;   ........
+C893: 3C 66 C0 C0 C0 66 3C 00 00 00 00 00 00 00 00 00 . 0x3C, 0x66, 0xC0, 0xC0, 0xC0, 0x66, 0x3C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   11111...
+                  ;   11..11..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11..11..
+                  ;   11111...
+                  ;   ........
+C8A3: F8 CC C6 C6 C6 CC F8 00 00 00 00 00 00 00 00 00 . 0xF8, 0xCC, 0xC6, 0xC6, 0xC6, 0xCC, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   1111111.
+                  ;   11......
+                  ;   11......
+                  ;   111111..
+                  ;   11......
+                  ;   11......
+                  ;   1111111.
+                  ;   ........
+C8B3: FE C0 C0 FC C0 C0 FE 00 00 00 00 00 00 00 00 00 . 0xFE, 0xC0, 0xC0, 0xFC, 0xC0, 0xC0, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   1111111.
+                  ;   11......
+                  ;   11......
+                  ;   111111..
+                  ;   11......
+                  ;   11......
+                  ;   11......
+                  ;   ........
+C8C3: FE C0 C0 FC C0 C0 C0 00 00 00 00 00 00 00 00 00 . 0xFE, 0xC0, 0xC0, 0xFC, 0xC0, 0xC0, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ..11111.
+                  ;   .11.....
+                  ;   11......
+                  ;   11..111.
+                  ;   11...11.
+                  ;   .11..11.
+                  ;   ..11111.
+                  ;   ........
+C8D3: 3E 60 C0 CE C6 66 3E 00 00 00 00 00 00 00 00 00 . 0x3E, 0x60, 0xC0, 0xCE, 0xC6, 0x66, 0x3E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   1111111.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   ........
+C8E3: C6 C6 C6 FE C6 C6 C6 00 00 00 00 00 00 00 00 00 . 0xC6, 0xC6, 0xC6, 0xFE, 0xC6, 0xC6, 0xC6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ..1111..
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ..1111..
+                  ;   ........
+C8F3: 3C 18 18 18 18 18 3C 00 00 00 00 00 00 00 00 00 . 0x3C, 0x18, 0x18, 0x18, 0x18, 0x18, 0x3C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   ...1111.
+                  ;   .....11.
+                  ;   .....11.
+                  ;   .....11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   .11111..
+                  ;   ........
+C903: 1E 06 06 06 C6 C6 7C 00 00 00 00 00 00 00 00 00 . 0x1E, 0x06, 0x06, 0x06, 0xC6, 0xC6, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   11...11.
+                  ;   11..11..
+                  ;   11.11...
+                  ;   1111....
+                  ;   11.11...
+                  ;   11..11..
+                  ;   11...11.
+                  ;   ........
+C913: C6 CC D8 F0 D8 CC C6 00 00 00 00 00 00 00 00 00 . 0xC6, 0xCC, 0xD8, 0xF0, 0xD8, 0xCC, 0xC6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .11.....
+                  ;   .11.....
+                  ;   .11.....
+                  ;   .11.....
+                  ;   .11.....
+                  ;   .11.....
+                  ;   .111111.
+                  ;   ........
+C923: 60 60 60 60 60 60 7E 00 00 00 00 00 00 00 00 00 . 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x7E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   11...11.
+                  ;   111.111.
+                  ;   1111111.
+                  ;   1111111.
+                  ;   11.1.11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   ........
+C933: C6 EE FE FE D6 C6 C6 00 00 00 00 00 00 00 00 00 . 0xC6, 0xEE, 0xFE, 0xFE, 0xD6, 0xC6, 0xC6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   11...11.
+                  ;   111..11.
+                  ;   1111.11.
+                  ;   1111111.
+                  ;   11.1111.
+                  ;   11..111.
+                  ;   11...11.
+                  ;   ........
+C943: C6 E6 F6 FE DE CE C6 00 00 00 00 00 00 00 00 00 . 0xC6, 0xE6, 0xF6, 0xFE, 0xDE, 0xCE, 0xC6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .11111..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   .11111..
+                  ;   ........
+C953: 7C C6 C6 C6 C6 C6 7C 00 00 00 00 00 00 00 00 00 . 0x7C, 0xC6, 0xC6, 0xC6, 0xC6, 0xC6, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   111111..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   111111..
+                  ;   11......
+                  ;   11......
+                  ;   11......
+                  ;   ........
+C963: FC C6 C6 FC C0 C0 C0 00 00 00 00 00 00 00 00 00 . 0xFC, 0xC6, 0xC6, 0xFC, 0xC0, 0xC0, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .11111..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11.1111.
+                  ;   11..11..
+                  ;   .1111.1.
+                  ;   ........
+C973: 7C C6 C6 C6 DE CC 7A 00 00 00 00 00 00 00 00 00 . 0x7C, 0xC6, 0xC6, 0xC6, 0xDE, 0xCC, 0x7A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   111111..
+                  ;   11...11.
+                  ;   11...11.
+                  ;   111111..
+                  ;   11.11...
+                  ;   11..11..
+                  ;   11...11.
+                  ;   ........
+C983: FC C6 C6 FC D8 CC C6 00 00 00 00 00 00 00 00 00 . 0xFC, 0xC6, 0xC6, 0xFC, 0xD8, 0xCC, 0xC6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .1111...
+                  ;   11..11..
+                  ;   11......
+                  ;   .11111..
+                  ;   .....11.
+                  ;   11...11.
+                  ;   .11111..
+                  ;   ........
+C993: 78 CC C0 7C 06 C6 7C 00 00 00 00 00 00 00 00 00 . 0x78, 0xCC, 0xC0, 0x7C, 0x06, 0xC6, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .111111.
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ........
+C9A3: 7E 18 18 18 18 18 18 00 00 00 00 00 00 00 00 00 . 0x7E, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   .11111..
+                  ;   ........
+C9B3: C6 C6 C6 C6 C6 C6 7C 00 00 00 00 00 00 00 00 00 . 0xC6, 0xC6, 0xC6, 0xC6, 0xC6, 0xC6, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11...11.
+                  ;   111.111.
+                  ;   .11111..
+                  ;   ..111...
+                  ;   ...1....
+                  ;   ........
+C9C3: C6 C6 C6 EE 7C 38 10 00 00 00 00 00 00 00 00 00 . 0xC6, 0xC6, 0xC6, 0xEE, 0x7C, 0x38, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   11...11.
+                  ;   11...11.
+                  ;   11.1.11.
+                  ;   1111111.
+                  ;   1111111.
+                  ;   111.111.
+                  ;   11...11.
+                  ;   ........
+C9D3: C6 C6 D6 FE FE EE C6 00 00 00 00 00 00 00 00 00 . 0xC6, 0xC6, 0xD6, 0xFE, 0xFE, 0xEE, 0xC6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   11...11.
+                  ;   111.111.
+                  ;   .11111..
+                  ;   ..111...
+                  ;   .11111..
+                  ;   111.111.
+                  ;   11...11.
+                  ;   ........
+C9E3: C6 EE 7C 38 7C EE C6 00 00 00 00 00 00 00 00 00 . 0xC6, 0xEE, 0x7C, 0x38, 0x7C, 0xEE, 0xC6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   .11..11.
+                  ;   .11..11.
+                  ;   .11..11.
+                  ;   ..1111..
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ...11...
+                  ;   ........
+C9F3: 66 66 66 3C 18 18 18 00 00 00 00 00 00 00 00 00 . 0x66, 0x66, 0x66, 0x3C, 0x18, 0x18, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ;   1111111.
+                  ;   ....111.
+                  ;   ...111..
+                  ;   ..111...
+                  ;   .111....
+                  ;   111.....
+                  ;   1111111.
+                  ;   ........
+CA03: FE 0E 1C 38 70 E0 FE 00 00 00 00 00 00 00 00 00 . 0xFE, 0x0E, 0x1C, 0x38, 0x70, 0xE0, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                  
+                  ; From 0x5B to 0x60 -- more symbols
+                  
+                  ch5B_60_Patterns:
+                  
+CA13: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+CA23: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+CA33: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+CA43: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+CA53: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+CA63: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+                  ch7B_7E_Patterns:
+                  
+CA73: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+CA83: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+CA93: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  
+CAA3: 81 00 24 00 00 24 00 81 00 42 24 00 00 24 42 00
+                  1......1
+                  .2....2.
+                  ..3..3..
+                  ........
+                  ........
+                  ..3..3..
+                  .2....2.
+                  1......1
+                  }
+                  NMI:
+                  
+CAB3: 48               pha                        ; Save ...
+CAB4: 8A               txa                        ; ...
+CAB5: 48               pha                        ; ...
+CAB6: 98               tya                        ; ...
+CAB7: 48               pha                        ; ... registers
+                  
+CAB8: A5 10            lda    nmi_ready           ; 0 means ...
+CABA: F0 4B            beq    _ppu_update_end     ; ... skip NMI completely
+                  
+CABC: C9 01            cmp    #1                  ; 1 means ...
+CABE: F0 0A            beq    _do_rendering       ; ... render the screen
+                  
+                  ; 2 means disable rendering
+                  
+CAC0: A9 00            lda    #0                  ; Disable all ...
+CAC2: 8D 01 20         sta    PPUMASK             ; ... screen rendering
+CAC5: 85 10            sta    nmi_ready           ; Skip NMIs until re-enabled
+CAC7: 4C 07 CB         jmp    _ppu_update_end     ; Done
+                  
+                  _do_rendering:
+                  
+                  ; Copy our OAM data to the PPU
+                  
+CACA: A2 00            ldx    #0                  ; Address 0x0000 ...
+CACC: 8E 03 20         stx    OAMADDR             ; ... in sprite ram
+CACF: A9 02            lda    #oam >> 8           ; MSB of ...
+CAD1: 8D 14 40         sta    APU_OAMDMA          ; ... our OAM data
+                  
+                  ; Copy our palette to the PPU
+                  
+CAD4: A9 88            lda    #0b10001000         ; Set the name table ...
+CAD6: 8D 00 20         sta    PPUCTRL             ; ... use (?? this never changes)
+CAD9: AD 02 20         lda    PPUSTATUS           ; Clear vblank flag
+CADC: A9 3F            lda    #0x3F               ; Set VRAM address ...
+CADE: 8D 06 20         sta    PPUADDR             ; ... to ...
+CAE1: 8E 06 20         stx    PPUADDR             ; ... 0x3F00
+CAE4: A2 00            ldx    #0                  ; Start at index 0
+                  _loop:
+CAE6: BD 00 03         lda    palette,X           ; From the palette ...
+CAE9: 8D 07 20         sta    PPUDATA             ; ... to VRAM
+CAEC: E8               inx                        ; Bump our index
+CAED: E0 20            cpx    #32                 ; All done?
+CAEF: 90 F5            bcc    _loop               ; No, keep going
+                  
+CAF1: A9 88            lda    #0b10001000         ; Set the name table ...
+CAF3: 8D 00 20         sta    PPUCTRL             ; ... use (?? this never changes)
+CAF6: A9 00            lda    #0x00
+CAF8: 8D 05 20         sta    PPUSCROLL
+CAFB: 8D 05 20         sta    PPUSCROLL
+                  
+CAFE: A9 1E            lda    #0b00011110         ; Enable ...
+CB00: 8D 01 20         sta    PPUMASK             ; ... rendering (we might have turned it off with =2)
+                  
+CB03: A2 00            ldx    #0                  ; Skip NMI from ...
+CB05: 86 10            stx    nmi_ready           ; ... now on
+                  
+                  _ppu_update_end:
+CB07: 68               pla                        ; Restore ...
+CB08: A8               tay                        ; ...
+CB09: 68               pla                        ; ...
+CB0A: AA               tax                        ; ...
+CB0B: 68               pla                        ; ... registers
+CB0C: 40               rti                        ; Return from NMI
+                  
+                  IRQ:
+CB0D: 40               rti
+                  
+                  ; Some helper functions
+                  
+                  wait_ppu_update:
+CB0E: A9 01            lda    #1                 ; Enable ...
+CB10: 85 10            sta    nmi_ready          ; ... rendering
+                  _loop:
+CB12: A5 10            lda    nmi_ready          ; Wait for ...
+CB14: D0 FC            bne    _loop              ; ... rendering to finish
+CB16: 60               rts                       ; Done
+                  
+                  wait_ppu_off:
+CB17: A9 01            lda    #1                 ; Disable ...
+CB19: 85 10            sta    nmi_ready          ; ... rendering
+                  _loop:
+CB1B: A5 10            lda    nmi_ready          ; Wait for ...
+CB1D: D0 FC            bne    _loop              ; ... ack from NMI handler
+CB1F: 60               rts                       ; Done
+                  
+                  ; Copy a block of memory of size SIZE from SOURCE to DESTINATION
+                  ; SOURCE = GP0,GP0+1
+                  ; DESTINATION = GP1,GP1+1
+                  ; SIZE = GP2,GP2+1
+                  MEM_copy_large_block:
+CB20: A0 00            ldy    #0
+                  _loop:
+CB22: B1 00            lda    (GP0),Y
+CB24: 91 02            sta    (GP1),Y
+                  ;
+CB26: A5 00            lda    GP0
+CB28: 18               clc
+CB29: 69 01            adc    #1
+CB2B: 85 00            sta    GP0
+CB2D: A5 01            lda    GP0+1
+CB2F: 69 00            adc    #0
+CB31: 85 01            sta    GP0+1
+                  ;
+CB33: A5 02            lda    GP1
+CB35: 18               clc
+CB36: 69 01            adc    #1
+CB38: 85 02            sta    GP1
+CB3A: A5 03            lda    GP1+1
+CB3C: 69 00            adc    #0
+CB3E: 85 03            sta    GP1+1
+                  ;
+CB40: A5 04            lda    GP2
+CB42: 38               sec
+CB43: E9 01            sbc    #1
+CB45: 85 04            sta    GP2
+CB47: A5 05            lda    GP2+1
+CB49: E9 00            sbc    #0
+CB4B: 85 05            sta    GP2+1
+                  ;
+CB4D: A5 04            lda    GP2
+CB4F: D0 D1            bne    _loop
+CB51: A5 05            lda    GP2+1
+CB53: D0 CD            bne    _loop
+CB55: 60               rts
+                  ; Copy a block of memory from CPU ram to PPU ram
+                  
+                  PPU_copy_block_to_vram:
+                  ; GP0 = (word) source address
+                  ; GP1 = (word) VRAM destination address
+                  ; GP2 = (word) number of bytes to copy
+                  ;
+CB56: AD 02 20         lda     PPUSTATUS            ; Clear address vram address latch
+                  ;
+CB59: A5 03            lda     GP1+1                ; VRAM ...
+CB5B: 8D 06 20         sta     PPUADDR              ; ... MSB
+CB5E: A5 02            lda     GP1                  ; VRAM ...
+CB60: 8D 06 20         sta     PPUADDR              ; ... LSB
+                  ;
+CB63: A0 00            ldy     #0x00                ; 0 offset in next read
+                  _copyLoop:
+CB65: B1 00            lda     (GP0),Y              ; Read byte from ROM
+CB67: 8D 07 20         sta     PPUDATA              ; Write byte to VRAM
+                  ;
+CB6A: A5 00            lda     GP0                  ; Increment ...
+CB6C: 18               clc                          ; ... two ...
+CB6D: 69 01            adc     #0x01                ; ... byte ...
+CB6F: 85 00            sta     GP0                  ; ... pointer ...
+CB71: A5 01            lda     GP0+1                ; ... at ...
+CB73: 69 00            adc     #0x00                ; ... 00 and ...
+CB75: 85 01            sta     GP0+1                ; ... 01
+                  ;
+CB77: A5 04            lda     GP2                  ; Decrement ...
+CB79: 38               sec                          ; ... two ...
+CB7A: E9 01            sbc     #0x01                ; ... byte ...
+CB7C: 85 04            sta     GP2                  ; ... count ...
+CB7E: A5 05            lda     GP2+1                ; ... at ...
+CB80: E9 00            sbc     #0x00                ; ... 02 and ...
+CB82: 85 05            sta     GP2+1                ; ... 03
+                  ;
+CB84: A5 04            lda     GP2                  ; More to do?
+CB86: D0 DD            bne     _copyLoop            ; Yes ... go move all
+CB88: A5 05            lda     GP2+1                ; More to do?
+CB8A: D0 D9            bne     _copyLoop            ; Yes ... go move all
+CB8C: 60               rts
+                  
+                  0xFF50:
+                  
+                  ; RESET vector points here. This code should identical and at the same origin
+                  ; in all banks of the ROM.
+                  RESET:
+FF50: 78               sei                        ; Disable interrupts
+FF51: D8               cld                        ; Clear decimal mode (no hardware support)
+FF52: A9 00            lda    #0                  ; Disable ...
+FF54: 8D 00 20         sta    PPUCTRL             ; ... NMI source
+FF57: 8D 01 20         sta    PPUMASK             ; Disable rendering
+FF5A: 8D 10 40         sta    APU_DM_CONTROL      ; Diable DMC IRQ
+FF5D: A9 40            lda    #0x40               ; Disable ...
+FF5F: 8D 17 40         sta    APU_JOYPAD2         ; ... APU frame IRQ
+FF62: A2 FF            ldx    #0xFF               ; Top of ...
+FF64: 9A               txs                        ; ... stack
+                  
+FF65: AD 00 80         lda    0x8000              ; Experiment ...
+FF68: 85 80            sta    0x80                ; ... to see ...
+FF6A: AD 00 C0         lda    0xC000              ; ... how banks are mapped ...
+FF6D: 85 81            sta    0x81                ; ... at reset
+                  
+                  ; Wait for 2 vblanks to give NES hardware time to start
+FF6F: AD 02 20         lda    PPUSTATUS           ; Clear vblank flag
+                  _wait1:
+FF72: AD 02 20         lda    PPUSTATUS           ; Wait for ...
+FF75: 29 80            and    #0x80               ; ... vblank ...
+FF77: F0 F9            beq    _wait1              ; ... flag
+FF79: AD 02 20         lda    PPUSTATUS           ; Clear vblank flag
+                  _wait2:
+FF7C: AD 02 20         lda    PPUSTATUS           ; Wait for ...
+FF7F: 29 80            and    #0x80               ; ... vblank ...
+FF81: F0 F9            beq    _wait2              ; ... flag
+                  
+                  ; RESET the MMC1 and configure it
+FF83: 20 E8 FF         jsr     MMC1_reset          ; Reset the MMC1 mapper
+FF86: A9 0F            lda     #0x0F               ; Set MMC1 control to 8K CHR ROM, fixed/bank 16K PRG pages, ...
+FF88: 20 98 FF         jsr     MMC1_set_control    ; ... and horizontal mirroring (vertical scrolling)
+FF8B: A9 00            lda     #0x00               ; Set VROM bank ...
+FF8D: 20 AC FF         jsr     MMC1_set_chr_bank_0 ; ... to bank 0
+FF90: A9 00            lda     #0x00               ; Bank 0 ...
+FF92: 20 D4 FF         jsr     MMC1_set_prg_bank   ; ... in the low ROM bank
+                  
+FF95: 4C 01 C0         jmp     START               ; Start of code
+                  .CPU 6502
+                  
+                  ; .include MMC1.asm.md
+                  
+                  MMC1_set_control:
+                  ; Code lifted from The Legend of Zelda
+FF98: 8D 00 80         STA     MMC1_Control       ; MMC Register 0 (control): --edcba ...
+FF9B: 4A               LSR     A                  ; ... mirroring
+FF9C: 8D 00 80         STA     MMC1_Control       ; ... mirroring
+FF9F: 4A               LSR     A                  ; ... switch: c=0 high ROM, C=1 low ROM
+FFA0: 8D 00 80         STA     MMC1_Control       ; ... size: d=0 32K (full), D=1 16K (half)
+FFA3: 4A               LSR     A                  ; ... chrrom mode: e=0 8K banks, B=1 4K banks
+FFA4: 8D 00 80         STA     MMC1_Control       ; The MMC is write-trigger (write to ROM ...
+FFA7: 4A               LSR     A                  ; .. has no affect anyway).
+FFA8: 8D 00 80         STA     MMC1_Control       ; Bits are written from LSB to MSB ...
+FFAB: 60               RTS                        ; ... only 5 bits
+                  
+                  MMC1_set_chr_bank_0:
+FFAC: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+FFAF: 4A               LSR     A                  ;
+FFB0: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+FFB3: 4A               LSR     A                  ;
+FFB4: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+FFB7: 4A               LSR     A                  ;
+FFB8: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+FFBB: 4A               LSR     A                  ;
+FFBC: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+FFBF: 60               RTS                        ;
+                  
+                  MMC1_set_chr_bank_1:
+FFC0: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+FFC3: 4A               LSR     A                  ;
+FFC4: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+FFC7: 4A               LSR     A                  ;
+FFC8: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+FFCB: 4A               LSR     A                  ;
+FFCC: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+FFCF: 4A               LSR     A                  ;
+FFD0: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+FFD3: 60               RTS                        ;
+                  
+                  MMC1_set_prg_bank:
+                  ; Set the MMC Bank register (3) to value in A
+                  ; Code lifted from The Legend of Zelda
+FFD4: 8D 00 E0         STA     MMC1_PRG_Bank      ; MMC Register 3 (ROM page switching): --edcba ...
+FFD7: 4A               LSR     A                  ; ...
+FFD8: 8D 00 E0         STA     MMC1_PRG_Bank      ; ... Write the ...
+FFDB: 4A               LSR     A                  ; ... switching ...
+FFDC: 8D 00 E0         STA     MMC1_PRG_Bank      ; ... page ...
+FFDF: 4A               LSR     A                  ; ... number
+FFE0: 8D 00 E0         STA     MMC1_PRG_Bank      ; The MMC is write-trigger (write to ROM ...
+FFE3: 4A               LSR     A                  ; .. has no affect anyway).
+FFE4: 8D 00 E0         STA     MMC1_PRG_Bank      ; Bits are written from LSB to MSB ...
+FFE7: 60               RTS                        ; ... only 5 bits
+                  
+                  MMC1_reset:
+                  ; Code lifted from The Legend of Zelda
+FFE8: 09 FF            ORA     #0xFF              ; Reset ...
+FFEA: 8D 00 80         STA     MMC1_Control       ; ... MMC1
+                  ; One RESET gets all the registers. Other documents think that development hardware might
+                  ; have needed RESET on all four. So here it is.
+FFED: 8D 00 A0         STA     MMC1_CHR_Bank0     ; All ...
+FFF0: 8D 00 C0         STA     MMC1_CHR_Bank1     ; ... four ...
+FFF3: 8D 00 E0         STA     MMC1_PRG_Bank      ; ... MMC1 registers
+FFF6: 60               RTS
+                  
+                  0xFFFA:
+FFFA: B3 CA            . word NMI
+FFFC: 50 FF            . word RESET
+FFFE: 0D CB            . word IRQ

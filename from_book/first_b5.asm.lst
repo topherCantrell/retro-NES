@@ -1,0 +1,302 @@
+#### Labels
+IRQ              = 0x8005
+MMC1_reset       = 0xBFE8
+MMC1_set_chr_bank_0 = 0xBFAC
+MMC1_set_chr_bank_1 = 0xBFC0
+MMC1_set_control = 0xBF98
+MMC1_set_prg_bank = 0xBFD4
+NMI              = 0x8004
+RESET            = 0xBF50
+RESET_wait1      = 0xBF72
+RESET_wait2      = 0xBF7C
+START            = 0x8001
+
+#### Defines
+APU_DM_CONTROL   = 0x4010
+APU_JOYPAD1      = 0x4016
+APU_JOYPAD2      = 0x4017
+APU_OAMDMA       = 0x4014
+APU_channel_1_frequency = 0x4002
+APU_channel_1_length = 0x4003
+APU_channel_1_sweep = 0x4001
+APU_channel_1_volume = 0x4000
+APU_channel_2_frequency = 0x4006
+APU_channel_2_length = 0x4007
+APU_channel_2_sweep = 0x4005
+APU_channel_2_volume = 0x4004
+APU_channel_3_frequency = 0x400A
+APU_channel_3_length = 0x400B
+APU_channel_3_linear_counter = 0x4008
+APU_channel_4_frequency = 0x400E
+APU_channel_4_length = 0x400F
+APU_channel_4_volume = 0x400C
+APU_channel_5_address = 0x4012
+APU_channel_5_delta_counter = 0x4011
+APU_channel_5_length = 0x4013
+APU_status       = 0x4015
+MMC1_CHR_Bank0   = 0xA000
+MMC1_CHR_Bank1   = 0xC000
+MMC1_Control     = 0x8000
+MMC1_PRG_Bank    = 0xE000
+OAMADDR          = 0x2003
+OAMDATA          = 0x2004
+PPUADDR          = 0x2006
+PPUCTRL          = 0x2000
+PPUDATA          = 0x2007
+PPUMASK          = 0x2001
+PPUSCROLL        = 0x2005
+PPUSTATUS        = 0x2002
+
+                  .CPU 6502
+                  
+                  .CPU 6502
+                  
+                  ; PPU registers
+                  .PPUCTRL        = 0x2000 ; Write only
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUCTRL
+                  ;      VPHBSINN
+                  ;        V=1 enable NMI generation, 0 disabled
+                  ;        P=1 PPU is master, 0 read backdrop from EXT pins
+                  ;        H=1 sprites are 8x16, 0 for 8x8
+                  ;        B=0 background pattern table is 0000, 1 for 1000
+                  ;        S=0 sprite pattern table for 8x8 is 0000, 1 for 1000 (ignored in 8x16)
+                  ;        I=0 vram increments by 1 with each write, 0 for increment by 32 for each write
+                  ;        NN base name table address: 0=2000, 1=2400, 2=2800, 3=2C00
+                  
+                  .PPUMASK           = 0x2001 ; Write only
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUMASK
+                  ;      BGRsbMmG
+                  ;        BGR Emphasize Blue, Green, and Red
+                  ;        s=1 enable sprite rendering, 0 for hide
+                  ;        b=1 enable background rendering, 0 for hide
+                  ;        M=1 show sprites in leftmost 8 pixels, 0 for hide
+                  ;        m=1 show background leftmost 8 pixels, 0 for hide
+                  ;        G=0 normal color, 1 for greyscale
+                  
+                  .PPUSTATUS         = 0x2002 ; Read only
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUSTATUS
+                  ;      VSO-----
+                  ;        V=1 VBlank happened, cleared on read, unreliable (use NMI)
+                  ;        S=1 sprite 0 hit the background
+                  ;        O=1 when more than 8 sprites are on a line (buggy and not reliable)
+                  
+                  ; https://www.nesdev.org/wiki/PPU_registers#OAMADDR
+                  .OAMADDR = 0x2003 ; Write 0 here and use DMA
+                  .OAMDATA = 0x2004 ; Use DMA instead
+                  
+                  ; IMPORTANT: writes to PPU_vram_address and name-table-bits in PPU_control must
+                  ; happen BEFORE writes to the scroll offset.
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUSCROLL
+                  
+                  .PPUSCROLL  = 0x2005 ; 1st write (after reading the status) for X scroll, 2nd write for Y
+                  ;https://www.nesdev.org/wiki/PPU_registers#PPUSCROLL
+                  
+                  ; https://www.nesdev.org/wiki/PPU_registers#PPUADDR
+                  .PPUADDR   = 0x2006 ; 1st write (after reading the status) for MSB, 2nd for LSB
+                  .PPUDATA   = 0x2007
+                  ;
+                  ; The PPU palette can become corrupted (see the link). When done writing to palette memory,
+                  ; the workaround is to always:
+                  ;   1. Update the address, if necessary, so that it's pointing at $3F00, $3F10, $3F20, or any other mirror.
+                  ;   2. Only then change the address to point outside of palette memory.
+                  
+                  ; APU registers
+                  .APU_channel_1_volume         = 0x4000
+                  .APU_channel_1_sweep          = 0x4001
+                  .APU_channel_1_frequency      = 0x4002
+                  .APU_channel_1_length         = 0x4003
+                  .APU_channel_2_volume         = 0x4004
+                  .APU_channel_2_sweep          = 0x4005
+                  .APU_channel_2_frequency      = 0x4006
+                  .APU_channel_2_length         = 0x4007
+                  .APU_channel_3_linear_counter = 0x4008
+                  ; APU_channel_3_unused        = 0x4009
+                  .APU_channel_3_frequency      = 0x400A
+                  .APU_channel_3_length         = 0x400B
+                  .APU_channel_4_volume         = 0x400C
+                  ; APU_channel_4_unused        = 0x400D
+                  .APU_channel_4_frequency      = 0x400E
+                  .APU_channel_4_length         = 0x400F
+                  
+                  .APU_DM_CONTROL               = 0x4010
+                  ;      IL--RRRR
+                  ;        I=1 enable DPCM interrupt, 0 for diable
+                  ;        L loop flag
+                  ;        RRRR Rate index
+                  
+                  .APU_channel_5_delta_counter  = 0x4011
+                  .APU_channel_5_address        = 0x4012
+                  .APU_channel_5_length         = 0x4013
+                  .APU_OAMDMA                   = 0x4014
+                  .APU_status                   = 0x4015
+                  .APU_JOYPAD1                  = 0x4016
+                  
+                  .APU_JOYPAD2                  = 0x4017
+                  ;      MI------
+                  ;        M=1 5-step sequence, 0 for 4-step sequence
+                  ;        I=1 interrupt inhibited, 0 for enterrupt enabled
+                  
+                  ; MMC1 Memory Mapper Hardware (Zelda, Kid Icarrus, others)
+                  
+                  ; https://www.nesdev.org/wiki/MMC1
+                  
+                  ; Write 1xxxxxxx to any address 8000-FFFF to reset the MMC1
+                  
+                  ; Write 5 times to an address to shift value into the register
+                  
+                  ; 1_00_xxxxxxxxxxxxx CONTROL:
+                  ; CPPMM
+                  ;  - MM = Mirroring
+                  ;    - 00: one screen, lower bank
+                  ;    - 01: one screen, upper bank
+                  ;    - 10: vertical
+                  ;    - 11: horizontal
+                  ;  - PP = Program ROM bank mode
+                  ;    - 00: switch 32 KB at 8000, ignore low bit of bank number
+                  ;    - 01: (same as 00)
+                  ;    - 02: Fix first bank at 8000, switch 16K bank at C000
+                  ;    - 03: Fix last bank at C000, switch 16K bank at 8000 (reset value)
+                  ; - C = CHR ROM bank mode
+                  ;    - 0: switch 8K at a time
+                  ;    - 1: switch two separate 4K banks
+                  
+                  ; 1_01_xxxxxxxxxxxxx CHR BANK 0
+                  ; CCCCC = Select 4K CHR bank at PPU 0000 (ignored in 8K mode)
+                  
+                  ; 1_10_xxxxxxxxxxxxx CHR BANK 1
+                  ; CCCCC = Select 4K CHR bank at PPU 1000 (ignored in 8K mode)
+                  
+                  ; 1_11_xxxxxxxxxxxxx PRG BANK
+                  ; RPPPP
+                  ; PPPP = Select 16K ROM bank (lower bit ignored in 32K mode)
+                  ; R = unused in MMC1
+                  
+                  .MMC1_Control   = 0x8000
+                  .MMC1_CHR_Bank0 = 0xA000
+                  .MMC1_CHR_Bank1 = 0xC000
+                  .MMC1_PRG_Bank  = 0xE000
+                  
+                  0x8000:
+                  
+8000: 52               . byte 0x52  ; Bank identifier for reset experiment
+                  
+                  START:
+8001: 4C 01 80         jmp START
+                  NMI:
+8004: 40               rti
+                  IRQ:
+8005: 40               rti
+                  
+                  0xBF50:
+                  
+                  ; RESET vector points here. This code should identical and at the same origin
+                  ; in all banks of the ROM.
+                  RESET:
+BF50: 78               sei                        ; Disable interrupts
+BF51: D8               cld                        ; Clear decimal mode (no hardware support)
+BF52: A9 00            lda    #0                  ; Disable ...
+BF54: 8D 00 20         sta    PPUCTRL             ; ... NMI source
+BF57: 8D 01 20         sta    PPUMASK             ; Disable rendering
+BF5A: 8D 10 40         sta    APU_DM_CONTROL      ; Diable DMC IRQ
+BF5D: A9 40            lda    #0x40               ; Disable ...
+BF5F: 8D 17 40         sta    APU_JOYPAD2         ; ... APU frame IRQ
+BF62: A2 FF            ldx    #0xFF               ; Top of ...
+BF64: 9A               txs                        ; ... stack
+                  
+BF65: AD 00 80         lda    0x8000              ; Experiment ...
+BF68: 85 80            sta    0x80                ; ... to see ...
+BF6A: AD 00 C0         lda    0xC000              ; ... how banks are mapped ...
+BF6D: 85 81            sta    0x81                ; ... at reset
+                  
+                  ; Wait for 2 vblanks to give NES hardware time to start
+BF6F: AD 02 20         lda    PPUSTATUS           ; Clear vblank flag
+                  _wait1:
+BF72: AD 02 20         lda    PPUSTATUS           ; Wait for ...
+BF75: 29 80            and    #0x80               ; ... vblank ...
+BF77: F0 F9            beq    _wait1              ; ... flag
+BF79: AD 02 20         lda    PPUSTATUS           ; Clear vblank flag
+                  _wait2:
+BF7C: AD 02 20         lda    PPUSTATUS           ; Wait for ...
+BF7F: 29 80            and    #0x80               ; ... vblank ...
+BF81: F0 F9            beq    _wait2              ; ... flag
+                  
+                  ; RESET the MMC1 and configure it
+BF83: 20 E8 BF         jsr     MMC1_reset          ; Reset the MMC1 mapper
+BF86: A9 0F            lda     #0x0F               ; Set MMC1 control to 8K CHR ROM, fixed/bank 16K PRG pages, ...
+BF88: 20 98 BF         jsr     MMC1_set_control    ; ... and horizontal mirroring (vertical scrolling)
+BF8B: A9 00            lda     #0x00               ; Set VROM bank ...
+BF8D: 20 AC BF         jsr     MMC1_set_chr_bank_0 ; ... to bank 0
+BF90: A9 00            lda     #0x00               ; Bank 0 ...
+BF92: 20 D4 BF         jsr     MMC1_set_prg_bank   ; ... in the low ROM bank
+                  
+BF95: 4C 01 80         jmp     START               ; Start of code
+                  .CPU 6502
+                  
+                  ; .include MMC1.asm.md
+                  
+                  MMC1_set_control:
+                  ; Code lifted from The Legend of Zelda
+BF98: 8D 00 80         STA     MMC1_Control       ; MMC Register 0 (control): --edcba ...
+BF9B: 4A               LSR     A                  ; ... mirroring
+BF9C: 8D 00 80         STA     MMC1_Control       ; ... mirroring
+BF9F: 4A               LSR     A                  ; ... switch: c=0 high ROM, C=1 low ROM
+BFA0: 8D 00 80         STA     MMC1_Control       ; ... size: d=0 32K (full), D=1 16K (half)
+BFA3: 4A               LSR     A                  ; ... chrrom mode: e=0 8K banks, B=1 4K banks
+BFA4: 8D 00 80         STA     MMC1_Control       ; The MMC is write-trigger (write to ROM ...
+BFA7: 4A               LSR     A                  ; .. has no affect anyway).
+BFA8: 8D 00 80         STA     MMC1_Control       ; Bits are written from LSB to MSB ...
+BFAB: 60               RTS                        ; ... only 5 bits
+                  
+                  MMC1_set_chr_bank_0:
+BFAC: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+BFAF: 4A               LSR     A                  ;
+BFB0: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+BFB3: 4A               LSR     A                  ;
+BFB4: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+BFB7: 4A               LSR     A                  ;
+BFB8: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+BFBB: 4A               LSR     A                  ;
+BFBC: 8D 00 A0         STA     MMC1_CHR_Bank0     ;
+BFBF: 60               RTS                        ;
+                  
+                  MMC1_set_chr_bank_1:
+BFC0: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+BFC3: 4A               LSR     A                  ;
+BFC4: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+BFC7: 4A               LSR     A                  ;
+BFC8: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+BFCB: 4A               LSR     A                  ;
+BFCC: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+BFCF: 4A               LSR     A                  ;
+BFD0: 8D 00 C0         STA     MMC1_CHR_Bank1     ;
+BFD3: 60               RTS                        ;
+                  
+                  MMC1_set_prg_bank:
+                  ; Set the MMC Bank register (3) to value in A
+                  ; Code lifted from The Legend of Zelda
+BFD4: 8D 00 E0         STA     MMC1_PRG_Bank      ; MMC Register 3 (ROM page switching): --edcba ...
+BFD7: 4A               LSR     A                  ; ...
+BFD8: 8D 00 E0         STA     MMC1_PRG_Bank      ; ... Write the ...
+BFDB: 4A               LSR     A                  ; ... switching ...
+BFDC: 8D 00 E0         STA     MMC1_PRG_Bank      ; ... page ...
+BFDF: 4A               LSR     A                  ; ... number
+BFE0: 8D 00 E0         STA     MMC1_PRG_Bank      ; The MMC is write-trigger (write to ROM ...
+BFE3: 4A               LSR     A                  ; .. has no affect anyway).
+BFE4: 8D 00 E0         STA     MMC1_PRG_Bank      ; Bits are written from LSB to MSB ...
+BFE7: 60               RTS                        ; ... only 5 bits
+                  
+                  MMC1_reset:
+                  ; Code lifted from The Legend of Zelda
+BFE8: 09 FF            ORA     #0xFF              ; Reset ...
+BFEA: 8D 00 80         STA     MMC1_Control       ; ... MMC1
+                  ; One RESET gets all the registers. Other documents think that development hardware might
+                  ; have needed RESET on all four. So here it is.
+BFED: 8D 00 A0         STA     MMC1_CHR_Bank0     ; All ...
+BFF0: 8D 00 C0         STA     MMC1_CHR_Bank1     ; ... four ...
+BFF3: 8D 00 E0         STA     MMC1_PRG_Bank      ; ... MMC1 registers
+BFF6: 60               RTS
+                  
+                  0xBFFA:
+BFFA: 04 80            . word NMI
+BFFC: 50 BF            . word RESET
+BFFE: 05 80            . word IRQ

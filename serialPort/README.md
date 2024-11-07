@@ -35,7 +35,7 @@ oscillator. The 6850 chip divides that by 64 to produce the 115200 serial rate.
 
 <img src="chips.jpg" width=600>
 
-I used 30AWG wirewrap wire and solder the connections point to point:
+I used 30AWG wirewrap wire and soldered the connections point to point:
 
 <img src="serialWire.jpg" width=600>
 

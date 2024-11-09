@@ -1,60 +1,62 @@
 printString:
 ; Print a null-terminated string to the screen
 ;
-; GP_00 = ROM address of string
-; GP_02 = Name table address
+; GP0 = ROM address of string
+; GP1 = Name table address
 ;
-      lda    PPU_status           ; Clear address vram address latch
-      lda    GP_02+1              ; MSB of ...
-      sta    PPU_vram_address     ; ... name table address
-      lda    GP_02                ; LSB of ...
-      sta    PPU_vram_address     ; ... name table address
-      ldy    #0x00                ; First byte of string
+      lda    PPUSTATUS     ; Clear address vram address latch
+      lda    GP1+1         ; MSB of ...
+      sta    PPUADDR       ; ... name table address
+      lda    GP1           ; LSB of ...
+      sta    PPUADDR       ; ... name table address
+      ldy    #0x00         ; First byte of string
 _printLoop:
-      lda    (GP_00),Y            ; Next character
-      beq    _printDone           ; End of string
-      sta    PPU_vram_data        ; To screen
-      iny                         ; Next character
-      jmp    _printLoop           ; Do all
+      lda    (GP0),Y       ; Next character
+      beq    _printDone    ; End of string
+      sta    PPUDATA       ; To screen
+      iny                  ; Next character
+      jmp    _printLoop    ; Do all
 _printDone:
-      rts                         ; Done
+      rts                  ; Done
 
 printHexByte:
 ; Print a 2 digit hex byte to the screen
 ;
 ; A = Value to print
-; GP_02 = Name table address
+; GP1 = Name table address
 ;
-      tax                         ; Save value
-      lda    PPU_status           ; Clear address vram address latch
-      lda    GP_02+1              ; MSB of ...
-      sta    PPU_vram_address     ; ... name table address
-      lda    GP_02                ; LSB of ...
-      sta    PPU_vram_address     ; ... name table address
-      txa                         ; Restore value
-      lsr    a                    ; High ...
-      lsr    a                    ; ...
-      lsr    a                    ; ...
-      lsr    a                    ; ... nibble      
-      clc                         ; Clear carry
-      adc    #0x30                ; Convert to ASCII
-      cmp    #0x3A                ; Greater than 9?
-      bcc    _printHex1           ; No
+      tax                  ; Save value
+      lda    PPUSTATUS     ; Clear address vram address latch
+      lda    GP1+1         ; MSB of ...
+      sta    PPUADDR       ; ... name table address
+      lda    GP1           ; LSB of ...
+      sta    PPUADDR       ; ... name table address
+      txa                  ; Restore value
+      lsr    a             ; High ...
+      lsr    a             ; ...
+      lsr    a             ; ...
+      lsr    a             ; ... nibble      
+      clc                  ; Clear carry
+      adc    #0x30         ; Convert to ASCII
+      cmp    #0x3A         ; Greater than 9?
+      bcc    _printHex1    ; No
       clc
       adc    #7
 _printHex1:
-      sta    PPU_vram_data        ; To screen
-      txa                         ; Restore value
-      and    #0x0F                ; Low nibble
-      clc                         ; Clear carry
-      adc    #0x30                ; Convert to ASCII
-      cmp    #0x3A                ; Greater than 9?
-      bcc    _printHex2           ; No
+      sta    PPUDATA       ; To screen
+      txa                  ; Restore value
+      and    #0x0F         ; Low nibble
+      clc                  ; Clear carry
+      adc    #0x30         ; Convert to ASCII
+      cmp    #0x3A         ; Greater than 9?
+      bcc    _printHex2    ; No
       clc
       adc    #7
 _printHex2:
-      sta    PPU_vram_data        ; To screen      
+      sta    PPUDATA       ; To screen      
       rts
+
+; From 0x20 to 0x39 -- first symbols and the numbers
 
 ch20_2F_Patterns:
 
@@ -328,6 +330,8 @@ ch30_39_Patterns:
 ;   ........
 . 0x7C, 0xC6, 0xC6, 0x7E, 0x06, 0x0C, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
+; From 0x3A to 0x40 -- more symbols
+
 ch3A_40_Patterns:
 
 .tool NESImageTool { ; :
@@ -405,6 +409,8 @@ ch3A_40_Patterns:
    .2....2.
    1......1
 }
+
+; From 0x41 to 0x5A -- capital letters
 
 ch41_5A_Patterns:
 
@@ -667,6 +673,8 @@ ch41_5A_Patterns:
 ;   1111111.
 ;   ........
 . 0xFE, 0x0E, 0x1C, 0x38, 0x70, 0xE0, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+
+; From 0x5B to 0x60 -- more symbols
 
 ch5B_60_Patterns:
 

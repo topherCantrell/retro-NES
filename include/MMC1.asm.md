@@ -34,8 +34,8 @@
 ; PPPP = Select 16K ROM bank (lower bit ignored in 32K mode)
 ; R = unused in MMC1
 
-.MMC_Control   = 0x8000
-.MMC_CHR_Bank0 = 0xA000
-.MMC_CHR_Bank1 = 0xC000
-.MMC_PRG_Bank  = 0xE000
+.MMC1_Control   = 0x8000
+.MMC1_CHR_Bank0 = 0xA000
+.MMC1_CHR_Bank1 = 0xC000
+.MMC1_PRG_Bank  = 0xE000
 ```

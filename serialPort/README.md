@@ -51,3 +51,7 @@ Here is the final cartridge in action:
 
 I used the [Bitbang Serial Controller](../bitbangSerial/README.md) to peek and poke the registers
 at 7C00 and 7C01. I also peeked and poked RAM locations to make sure RAM worked.
+
+Here is an echo program running on the NES:
+
+<img src="running.jpg" width=600>
